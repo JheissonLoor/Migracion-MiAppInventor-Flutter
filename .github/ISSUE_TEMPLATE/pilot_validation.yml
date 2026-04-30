@@ -1,0 +1,61 @@
+﻿name: Validacion piloto
+about: Registrar resultado de prueba en tablet, red de planta o API local
+labels: pilot, validation
+body:
+  - type: input
+    id: fecha
+    attributes:
+      label: Fecha de prueba
+      placeholder: 2026-04-30
+    validations:
+      required: true
+  - type: input
+    id: dispositivo
+    attributes:
+      label: Dispositivo
+      placeholder: Pixel Tablet / Lenovo industrial / tablet MDM
+    validations:
+      required: true
+  - type: dropdown
+    id: red
+    attributes:
+      label: Red usada
+      options:
+        - Planta
+        - Oficina
+        - Hotspot
+        - Emulador
+    validations:
+      required: true
+  - type: textarea
+    id: flujos
+    attributes:
+      label: Flujos probados
+      placeholder: |
+        - Login
+        - Consulta Stock PCP
+        - Salida de Almacen
+        - Impresion local
+    validations:
+      required: true
+  - type: textarea
+    id: resultado
+    attributes:
+      label: Resultado
+      description: GO, GO con observaciones o NO GO.
+    validations:
+      required: true
+  - type: textarea
+    id: hallazgos
+    attributes:
+      label: Hallazgos / errores
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist minimo
+      options:
+        - label: Login correcto por rol.
+        - label: QR escaneado correctamente.
+        - label: Endpoint respondio correctamente.
+        - label: Cola offline no dejo pendientes inesperados.
+        - label: No se perdieron datos.

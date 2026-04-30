@@ -1,5 +1,5 @@
-name: coolimport_pcp
-description: "Sistema de Gestión Textil - CoolImport S.A.C."
+﻿name: coolimport_pcp
+description: "Sistema de Gestion Textil - CoolImport S.A.C."
 publish_to: 'none'
 version: 2.0.0+1
 
@@ -10,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # === Íconos ===
+  # === Iconos ===
   cupertino_icons: ^1.0.8
 
   # === Estado (Riverpod) ===

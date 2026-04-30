@@ -1,0 +1,35 @@
+﻿name: Mejora funcional
+about: Proponer mejora de UI, flujo operativo o modulo Flutter
+labels: enhancement, needs-triage
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Problema operativo
+      description: Que dolor real resuelve esta mejora.
+    validations:
+      required: true
+  - type: textarea
+    id: propuesta
+    attributes:
+      label: Propuesta
+      description: Como deberia funcionar.
+    validations:
+      required: true
+  - type: dropdown
+    id: impacto
+    attributes:
+      label: Impacto esperado
+      options:
+        - Bajo - mejora visual o claridad
+        - Medio - reduce errores operativos
+        - Alto - evita perdida de datos o parada
+    validations:
+      required: true
+  - type: textarea
+    id: compatibilidad
+    attributes:
+      label: Compatibilidad MIT / backend
+      description: Indica si toca endpoints, payloads, QR o Google Sheets.
+    validations:
+      required: true

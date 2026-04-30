@@ -1,4 +1,4 @@
-name: Flutter CI
+﻿name: Flutter CI
 
 on:
   push:
@@ -13,12 +13,18 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
+
+      - name: Show toolchain
+        run: |
+          flutter --version
+          dart --version
 
       - name: Install dependencies
         run: flutter pub get
@@ -27,4 +33,4 @@ jobs:
         run: dart analyze
 
       - name: Unit tests
-        run: flutter test
+        run: flutter test --reporter compact

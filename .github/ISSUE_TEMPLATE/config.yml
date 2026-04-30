@@ -1,0 +1,5 @@
+﻿blank_issues_enabled: false
+contact_links:
+  - name: Documentacion de migracion
+    url: https://github.com/JheissonLoor/Migracion-MiAppInventor-Flutter/blob/master/docs/migration_status.md
+    about: Revisa el estado de migracion antes de abrir un issue.
