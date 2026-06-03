@@ -86,6 +86,8 @@ class _TelaresScreenState extends ConsumerState<TelaresScreen>
                           autovalidateMode: AutovalidateMode.onUserInteraction,
                           child: Column(
                             children: [
+                              _buildFlowGuide(state),
+                              const SizedBox(height: 10),
                               _buildScanCard(state, notifier),
                               const SizedBox(height: 10),
                               _buildResumenCard(),
@@ -143,6 +145,98 @@ class _TelaresScreenState extends ConsumerState<TelaresScreen>
     return ProductionStatusBanner(
       message: state.message,
       errorMessage: state.errorMessage,
+    );
+  }
+
+  Widget _buildFlowGuide(TelaresState state) {
+    final scanned = _field(state, 'codigo_pcp').isNotEmpty;
+    final loaded =
+        _field(state, 'codigo_urdido').isNotEmpty ||
+        _field(state, 'articulo_urdido').isNotEmpty;
+    final registroReady = _isRegistroReady(state);
+    final hasError = (state.errorMessage ?? '').trim().isNotEmpty;
+
+    final signal =
+        hasError
+            ? OperationSignalLevel.error
+            : (registroReady
+                ? OperationSignalLevel.ready
+                : (scanned
+                    ? OperationSignalLevel.warning
+                    : OperationSignalLevel.neutral));
+    final helper =
+        hasError
+            ? state.errorMessage!.trim()
+            : registroReady
+            ? 'Registro listo. Revise telar, puntaje y modo antes de enviar.'
+            : loaded
+            ? 'Datos cargados. Complete los campos de calidad.'
+            : scanned
+            ? 'Codigo recibido. Busque datos de telar para precargar.'
+            : 'Escanee o ingrese el codigo PCP del rollo.';
+
+    return OperationFlowGuide(
+      title: 'Guia operativa de telares',
+      statusLabel:
+          hasError
+              ? 'REVISAR'
+              : (registroReady
+                  ? 'LISTO'
+                  : (scanned ? 'EN PROCESO' : 'PENDIENTE')),
+      helperText: helper,
+      signal: signal,
+      accentColor: const Color(0xFF9A7A57),
+      steps: [
+        OperationStepData(
+          label: 'Escanear PCP',
+          icon: Icons.qr_code_scanner_rounded,
+          done: scanned,
+          active: !scanned,
+        ),
+        OperationStepData(
+          label: 'Precargar datos',
+          icon: Icons.manage_search_rounded,
+          done: loaded,
+          active: scanned && !loaded,
+        ),
+        OperationStepData(
+          label: 'Calidad y telar',
+          icon: Icons.fact_check_rounded,
+          done: registroReady,
+          active: loaded && !registroReady,
+        ),
+        OperationStepData(
+          label: 'Enviar seguro',
+          icon: Icons.send_rounded,
+          done: registroReady,
+          active: registroReady,
+        ),
+      ],
+      summary: [
+        OperationSummaryItem(
+          label: 'PCP',
+          value: _field(state, 'codigo_pcp'),
+          icon: Icons.confirmation_number_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Urdido',
+          value: _field(state, 'codigo_urdido'),
+          icon: Icons.inventory_2_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Modo',
+          value: _modeLabel(state.registroMode),
+          icon: Icons.rule_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Telar / Puntaje',
+          value:
+              state.isNuevoCorte
+                  ? '${_field(state, 'telar_nuevo')} / ${_field(state, 'puntaje_nuevo')}'
+                  : '${_field(state, 'telar')} / ${_field(state, 'puntaje1')}',
+          icon: Icons.precision_manufacturing_rounded,
+        ),
+      ],
     );
   }
 
@@ -820,6 +914,45 @@ class _TelaresScreenState extends ConsumerState<TelaresScreen>
       return 'Ingrese $field';
     }
     return null;
+  }
+
+  String _field(TelaresState state, String key) {
+    return (state.fields[key] ?? _controllers[key]?.text ?? '').trim();
+  }
+
+  bool _isRegistroReady(TelaresState state) {
+    if (_field(state, 'codigo_pcp').isEmpty || _field(state, 'reloj').isEmpty) {
+      return false;
+    }
+
+    if (state.registroMode == TelaresRegistroMode.nuevoCorte) {
+      return _field(state, 'puntaje_nuevo').isNotEmpty &&
+          _field(state, 'telar_nuevo').isNotEmpty;
+    }
+
+    final basePrimerCorte =
+        _field(state, 'puntaje1').isNotEmpty &&
+        _field(state, 'telar').isNotEmpty;
+    if (!basePrimerCorte) return false;
+
+    if (state.registroMode == TelaresRegistroMode.primerCorteAprobado) {
+      return _field(state, 'fecha_aprobado').isNotEmpty &&
+          _field(state, 'aprobado_por').isNotEmpty;
+    }
+
+    return _field(state, 'fecha_no_aprob').isNotEmpty &&
+        _field(state, 'observaciones').isNotEmpty;
+  }
+
+  String _modeLabel(TelaresRegistroMode mode) {
+    switch (mode) {
+      case TelaresRegistroMode.nuevoCorte:
+        return 'Nuevo corte';
+      case TelaresRegistroMode.primerCorteAprobado:
+        return 'Primer corte aprobado';
+      case TelaresRegistroMode.primerCorteNoAprobado:
+        return 'Primer corte no aprobado';
+    }
   }
 
   String _formatDate(String iso) {

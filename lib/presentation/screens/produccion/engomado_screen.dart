@@ -87,6 +87,8 @@ class _EngomadoScreenState extends ConsumerState<EngomadoScreen>
                           autovalidateMode: AutovalidateMode.onUserInteraction,
                           child: Column(
                             children: [
+                              _buildFlowGuide(state, proceso),
+                              const SizedBox(height: 10),
                               _buildScanCard(state, notifier),
                               const SizedBox(height: 10),
                               _buildSnapshotCard(state),
@@ -138,6 +140,99 @@ class _EngomadoScreenState extends ConsumerState<EngomadoScreen>
     return ProductionStatusBanner(
       message: state.message,
       errorMessage: state.errorMessage,
+    );
+  }
+
+  Widget _buildFlowGuide(EngomadoState state, String proceso) {
+    final scanned = _field(state, 'codigopcp').isNotEmpty;
+    final linked =
+        state.urdidoSnapshot.isNotEmpty ||
+        _field(state, 'codigo_urdido').isNotEmpty;
+    final processReady = _isProcesoReady(state, proceso);
+    final hasError = (state.errorMessage ?? '').trim().isNotEmpty;
+
+    final signal =
+        hasError
+            ? OperationSignalLevel.error
+            : (processReady
+                ? OperationSignalLevel.ready
+                : (scanned
+                    ? OperationSignalLevel.warning
+                    : OperationSignalLevel.neutral));
+    final helper =
+        hasError
+            ? state.errorMessage!.trim()
+            : processReady
+            ? 'Proceso listo. Revise metros, peso final y plegador antes de enviar.'
+            : linked
+            ? 'Urdido vinculado. Complete los datos del proceso.'
+            : scanned
+            ? 'Codigo recibido. Busque urdido para vincular la referencia.'
+            : 'Escanee el PCP para vincular el urdido base.';
+
+    return OperationFlowGuide(
+      title: 'Guia operativa de engomado',
+      statusLabel:
+          hasError
+              ? 'REVISAR'
+              : (processReady
+                  ? 'LISTO'
+                  : (scanned ? 'EN PROCESO' : 'PENDIENTE')),
+      helperText: helper,
+      signal: signal,
+      accentColor: const Color(0xFFB67A5A),
+      steps: [
+        OperationStepData(
+          label: 'Escanear PCP',
+          icon: Icons.qr_code_scanner_rounded,
+          done: scanned,
+          active: !scanned,
+        ),
+        OperationStepData(
+          label: 'Vincular urdido',
+          icon: Icons.link_rounded,
+          done: linked,
+          active: scanned && !linked,
+        ),
+        OperationStepData(
+          label: 'Completar proceso',
+          icon: Icons.settings_suggest_rounded,
+          done: processReady,
+          active: linked && !processReady,
+        ),
+        OperationStepData(
+          label: 'Enviar seguro',
+          icon: Icons.send_rounded,
+          done: processReady,
+          active: processReady,
+        ),
+      ],
+      summary: [
+        OperationSummaryItem(
+          label: 'PCP',
+          value: _field(state, 'codigopcp'),
+          icon: Icons.confirmation_number_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Proceso',
+          value: proceso,
+          icon: Icons.category_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Urdido',
+          value:
+              _field(state, 'codigo_urdido').isNotEmpty
+                  ? _field(state, 'codigo_urdido')
+                  : (state.urdidoSnapshot['codigo_urdido'] ?? ''),
+          icon: Icons.link_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Metros / Peso',
+          value:
+              '${_field(state, 'metros_engomado')} / ${_field(state, 'peso_engomado_final')}',
+          icon: Icons.timeline_rounded,
+        ),
+      ],
     );
   }
 
@@ -933,6 +1028,42 @@ class _EngomadoScreenState extends ConsumerState<EngomadoScreen>
       return 'Ingrese $field';
     }
     return null;
+  }
+
+  String _field(EngomadoState state, String key) {
+    return (state.fields[key] ?? _controllers[key]?.text ?? '').trim();
+  }
+
+  bool _isProcesoReady(EngomadoState state, String proceso) {
+    final normalized = proceso.toLowerCase();
+    final common =
+        _field(state, 'codigopcp').isNotEmpty &&
+        _field(state, 'tipo_proceso').isNotEmpty &&
+        _field(state, 'turno').isNotEmpty &&
+        _field(state, 'operario').isNotEmpty;
+    if (!common) return false;
+
+    if (normalized == AppConstants.procesoVolteado.toLowerCase()) {
+      return _field(state, 'fecha_volteado').isNotEmpty &&
+          _field(state, 'plegador_final_volteado').isNotEmpty;
+    }
+
+    final processBase =
+        _field(state, 'hora_inicial').isNotEmpty &&
+        _field(state, 'hora_final').isNotEmpty &&
+        _field(state, 'metros_engomado').isNotEmpty &&
+        _field(state, 'ancho_plegador').isNotEmpty &&
+        _field(state, 'peso_engomado_final').isNotEmpty &&
+        _field(state, 'plegador_final_engomado').isNotEmpty;
+    if (!processBase) return false;
+
+    if (normalized == AppConstants.procesoEnsimaje.toLowerCase()) {
+      return _field(state, 'codigo_urdido').isNotEmpty &&
+          _field(state, 'giro_encerado').isNotEmpty &&
+          _field(state, 'kilo_ensimaje').isNotEmpty;
+    }
+
+    return true;
   }
 
   String _formatDate(String iso) {

@@ -108,6 +108,8 @@ class _SalidaAlmacenScreenState extends ConsumerState<SalidaAlmacenScreen>
                                 child: SingleChildScrollView(
                                   child: Column(
                                     children: [
+                                      _buildFlowGuide(state),
+                                      const SizedBox(height: 10),
                                       _buildScanPanel(
                                         state: state,
                                         usuario: usuario,
@@ -420,6 +422,98 @@ class _SalidaAlmacenScreenState extends ConsumerState<SalidaAlmacenScreen>
     return ProductionStatusBanner(
       message: state.infoMessage,
       errorMessage: state.errorMessage,
+    );
+  }
+
+  Widget _buildFlowGuide(SalidaAlmacenState state) {
+    final scanned = state.hasQrValido;
+    final ubicacionConsultada = state.ultimaUbicacion != null;
+    final destinoCompleto =
+        state.form.nuevaUbicacion.trim().isNotEmpty &&
+        state.ubicacionPayload.trim().isNotEmpty;
+    final ready = state.isFormValid;
+    final hasError = (state.errorMessage ?? '').trim().isNotEmpty;
+
+    final signal =
+        hasError
+            ? OperationSignalLevel.error
+            : (ready
+                ? OperationSignalLevel.ready
+                : (scanned
+                    ? OperationSignalLevel.warning
+                    : OperationSignalLevel.neutral));
+    final statusLabel =
+        hasError
+            ? 'REVISAR'
+            : (ready ? 'LISTO' : (scanned ? 'EN PROCESO' : 'PENDIENTE'));
+    final helper =
+        hasError
+            ? state.errorMessage!.trim()
+            : !scanned
+            ? 'Escanee el QR del rollo para llenar los datos automaticamente.'
+            : !ubicacionConsultada
+            ? 'Consulte la ultima ubicacion antes de enviar el movimiento.'
+            : !ready
+            ? _requiredHint(state)
+            : 'Operacion lista. Revise el resumen final y envie.';
+
+    return OperationFlowGuide(
+      title: 'Guia operativa de salida',
+      statusLabel: statusLabel,
+      helperText: helper,
+      signal: signal,
+      accentColor: const Color(0xFF2F7C92),
+      steps: [
+        OperationStepData(
+          label: 'Escanear QR',
+          icon: Icons.qr_code_scanner_rounded,
+          done: scanned,
+          active: !scanned,
+        ),
+        OperationStepData(
+          label: 'Verificar ubicacion',
+          icon: Icons.location_searching_rounded,
+          done: ubicacionConsultada,
+          active: scanned && !ubicacionConsultada,
+        ),
+        OperationStepData(
+          label: 'Completar destino',
+          icon: Icons.pin_drop_rounded,
+          done: destinoCompleto,
+          active: scanned && ubicacionConsultada && !destinoCompleto,
+        ),
+        OperationStepData(
+          label: 'Validar y enviar',
+          icon: Icons.send_rounded,
+          done: ready,
+          active: ready,
+        ),
+      ],
+      summary: [
+        OperationSummaryItem(
+          label: 'PCP',
+          value: state.form.codigoPcp,
+          icon: Icons.confirmation_number_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Kardex',
+          value: state.form.codigoKardex,
+          icon: Icons.qr_code_2_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Destino',
+          value: state.ubicacionPayload,
+          icon: Icons.place_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Guia / OC',
+          value: [
+            state.form.numeroGuia.trim(),
+            state.form.ordenCompra.trim(),
+          ].where((item) => item.isNotEmpty).join(' / '),
+          icon: Icons.receipt_long_rounded,
+        ),
+      ],
     );
   }
 
@@ -988,6 +1082,10 @@ class _SalidaAlmacenScreenState extends ConsumerState<SalidaAlmacenScreen>
 
     return Column(
       children: [
+        if (state.hasQrValido) ...[
+          _buildSendSummary(state),
+          const SizedBox(height: 8),
+        ],
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
@@ -1072,6 +1170,48 @@ class _SalidaAlmacenScreenState extends ConsumerState<SalidaAlmacenScreen>
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildSendSummary(SalidaAlmacenState state) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color:
+              state.isFormValid
+                  ? const Color(0xFF86EFAC)
+                  : CorporateTokens.borderSoft,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            state.isFormValid
+                ? Icons.verified_rounded
+                : Icons.info_outline_rounded,
+            color:
+                state.isFormValid
+                    ? const Color(0xFF16A34A)
+                    : CorporateTokens.slate500,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Resumen final: PCP ${_safe(state.form.codigoPcp)} -> ${_safe(state.ubicacionPayload)} | Guia ${_safe(state.form.numeroGuia)} | OC ${_safe(state.form.ordenCompra)}',
+              style: const TextStyle(
+                color: CorporateTokens.navy900,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                height: 1.25,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

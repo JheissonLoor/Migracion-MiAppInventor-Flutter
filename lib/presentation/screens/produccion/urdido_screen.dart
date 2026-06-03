@@ -85,6 +85,8 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
                           autovalidateMode: AutovalidateMode.onUserInteraction,
                           child: Column(
                             children: [
+                              _buildFlowGuide(state),
+                              const SizedBox(height: 10),
                               _buildScanCard(state, notifier),
                               const SizedBox(height: 10),
                               _buildMainFormCard(state, notifier, usuario),
@@ -139,6 +141,99 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
     return ProductionStatusBanner(
       message: state.message,
       errorMessage: state.errorMessage,
+    );
+  }
+
+  Widget _buildFlowGuide(UrdidoState state) {
+    final scanned = _field(state, 'codigo_pcp').isNotEmpty;
+    final loaded = _field(state, 'codigo_urdido').isNotEmpty;
+    final coreReady =
+        loaded &&
+        _field(state, 'turno').isNotEmpty &&
+        _field(state, 'operario').isNotEmpty &&
+        _field(state, 'orden_pedido').isNotEmpty &&
+        _field(state, 'articulo').isNotEmpty &&
+        _field(state, 'metros_urdido').isNotEmpty &&
+        _field(state, 'num_plegador').isNotEmpty;
+    final hasError = (state.errorMessage ?? '').trim().isNotEmpty;
+
+    final signal =
+        hasError
+            ? OperationSignalLevel.error
+            : (coreReady
+                ? OperationSignalLevel.ready
+                : (scanned
+                    ? OperationSignalLevel.warning
+                    : OperationSignalLevel.neutral));
+    final helper =
+        hasError
+            ? state.errorMessage!.trim()
+            : coreReady
+            ? 'Formulario listo. Revise metros, plegador y operario antes de enviar.'
+            : loaded
+            ? 'Datos precargados. Complete campos obligatorios de urdido.'
+            : scanned
+            ? 'Codigo recibido. Precargue datos antes de registrar.'
+            : 'Escanee el PCP para recuperar datos base del proceso.';
+
+    return OperationFlowGuide(
+      title: 'Guia operativa de urdido',
+      statusLabel:
+          hasError
+              ? 'REVISAR'
+              : (coreReady ? 'LISTO' : (scanned ? 'EN PROCESO' : 'PENDIENTE')),
+      helperText: helper,
+      signal: signal,
+      accentColor: const Color(0xFFD48F54),
+      steps: [
+        OperationStepData(
+          label: 'Escanear PCP',
+          icon: Icons.qr_code_scanner_rounded,
+          done: scanned,
+          active: !scanned,
+        ),
+        OperationStepData(
+          label: 'Precargar urdido',
+          icon: Icons.manage_search_rounded,
+          done: loaded,
+          active: scanned && !loaded,
+        ),
+        OperationStepData(
+          label: 'Completar produccion',
+          icon: Icons.assignment_rounded,
+          done: coreReady,
+          active: loaded && !coreReady,
+        ),
+        OperationStepData(
+          label: 'Enviar seguro',
+          icon: Icons.send_rounded,
+          done: coreReady,
+          active: coreReady,
+        ),
+      ],
+      summary: [
+        OperationSummaryItem(
+          label: 'PCP',
+          value: _field(state, 'codigo_pcp'),
+          icon: Icons.confirmation_number_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Urdido',
+          value: _field(state, 'codigo_urdido'),
+          icon: Icons.tag_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Articulo',
+          value: _field(state, 'articulo'),
+          icon: Icons.inventory_2_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Metros / Plegador',
+          value:
+              '${_field(state, 'metros_urdido')} / ${_field(state, 'num_plegador')}',
+          icon: Icons.timeline_rounded,
+        ),
+      ],
     );
   }
 
@@ -786,6 +881,10 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
       return 'Ingrese $field';
     }
     return null;
+  }
+
+  String _field(UrdidoState state, String key) {
+    return (state.fields[key] ?? _controllers[key]?.text ?? '').trim();
   }
 
   String _formatDate(String iso) {

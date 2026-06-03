@@ -145,7 +145,10 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
                     const SizedBox(height: 10),
                     Expanded(
                       child: SingleChildScrollView(
-                        child:
+                        child: Column(
+                          children: [
+                            _buildFlowGuide(state),
+                            const SizedBox(height: 10),
                             isTablet
                                 ? Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,6 +171,8 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
                                     _qrCard(state, notifier),
                                   ],
                                 ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -939,6 +944,97 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     );
   }
 
+  Widget _buildFlowGuide(MovimientoTelasState state) {
+    final baseReady =
+        _numTelar.text.trim().isNotEmpty &&
+        _op.trim().isNotEmpty &&
+        _opNumero.text.trim().isNotEmpty &&
+        _articulo.text.trim().isNotEmpty;
+    final codeReady =
+        _codigoBase.text.trim().isNotEmpty && _numCorte.text.trim().isNotEmpty;
+    final corteReady = _isCorteReady();
+    final qrReady = state.qrRaw.trim().isNotEmpty;
+    final hasError = (state.errorMessage ?? '').trim().isNotEmpty;
+
+    final signal =
+        hasError
+            ? OperationSignalLevel.error
+            : (qrReady
+                ? OperationSignalLevel.ready
+                : (codeReady || baseReady
+                    ? OperationSignalLevel.warning
+                    : OperationSignalLevel.neutral));
+    final helper =
+        hasError
+            ? state.errorMessage!.trim()
+            : qrReady
+            ? 'QR listo. Registre el dato y luego imprima la etiqueta.'
+            : corteReady
+            ? 'Datos completos. Puede registrar corte o generar QR.'
+            : codeReady
+            ? 'Complete calidad, fechas y medidas antes de registrar.'
+            : 'Llene telar, OP y articulo; luego genere el codigo.';
+
+    return OperationFlowGuide(
+      title: 'Guia operativa de ingreso de telas',
+      statusLabel:
+          hasError
+              ? 'REVISAR'
+              : (qrReady ? 'QR LISTO' : (corteReady ? 'LISTO' : 'PENDIENTE')),
+      helperText: helper,
+      signal: signal,
+      accentColor: const Color(0xFF0EA5A4),
+      steps: [
+        OperationStepData(
+          label: 'Datos base',
+          icon: Icons.assignment_rounded,
+          done: baseReady,
+          active: !baseReady,
+        ),
+        OperationStepData(
+          label: 'Generar codigo',
+          icon: Icons.tag_rounded,
+          done: codeReady,
+          active: baseReady && !codeReady,
+        ),
+        OperationStepData(
+          label: 'Completar corte',
+          icon: Icons.content_cut_rounded,
+          done: corteReady,
+          active: codeReady && !corteReady,
+        ),
+        OperationStepData(
+          label: 'QR e impresion',
+          icon: Icons.qr_code_rounded,
+          done: qrReady,
+          active: corteReady && !qrReady,
+        ),
+      ],
+      summary: [
+        OperationSummaryItem(
+          label: 'Codigo',
+          value: '${_codigoBase.text}${_numCorte.text}',
+          icon: Icons.confirmation_number_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Articulo',
+          value: _articulo.text,
+          icon: Icons.inventory_2_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'MTS / KG',
+          value: '${_mts.text} / ${_peso.text}',
+          icon: Icons.scale_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Revisor',
+          value: _nombre.text,
+          icon: Icons.badge_rounded,
+        ),
+      ],
+    );
+  }
+
   IconData _cardIcon(String title) {
     final value = title.toLowerCase();
     if (value.contains('qr')) return Icons.qr_code_rounded;
@@ -1128,6 +1224,8 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     }
     return null;
   }
+
+  bool _isCorteReady() => _validarCorte() == null;
 
   String? _validarQr() {
     if (_codigoBase.text.trim().isEmpty ||

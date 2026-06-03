@@ -93,6 +93,8 @@ class _ConsultaStockScreenState extends ConsumerState<ConsultaStockScreen>
                       const SizedBox(height: 12),
                       _buildSearchCard(state),
                       const SizedBox(height: 12),
+                      _buildFlowGuide(state),
+                      const SizedBox(height: 12),
                       Expanded(
                         child: AnimatedSwitcher(
                           duration: const Duration(milliseconds: 260),
@@ -251,6 +253,94 @@ class _ConsultaStockScreenState extends ConsumerState<ConsultaStockScreen>
               ),
             ),
           ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFlowGuide(ConsultaStockState state) {
+    final typed = _codigoController.text.trim().isNotEmpty;
+    final detected =
+        state.codigoPcpDetectado.trim().isNotEmpty ||
+        state.codigoKardexDetectado.trim().isNotEmpty ||
+        state.ultimaConsulta.trim().isNotEmpty;
+    final consulted =
+        state.status == ConsultaStockStatus.success ||
+        state.status == ConsultaStockStatus.error;
+    final success = state.status == ConsultaStockStatus.success;
+    final hasError = state.status == ConsultaStockStatus.error;
+
+    final signal =
+        hasError
+            ? OperationSignalLevel.error
+            : (success
+                ? OperationSignalLevel.ready
+                : (typed || detected
+                    ? OperationSignalLevel.warning
+                    : OperationSignalLevel.neutral));
+    final helper =
+        hasError
+            ? (state.errorMessage ?? 'Revise el codigo consultado.')
+            : success
+            ? 'Stock encontrado. Los campos se muestran en el mismo orden MIT.'
+            : detected
+            ? 'Codigo detectado. Presione consultar si necesita refrescar.'
+            : 'Escanee QR completo o ingrese PCP/Kardex manualmente.';
+
+    return OperationFlowGuide(
+      title: 'Guia de consulta stock',
+      statusLabel: hasError ? 'ERROR' : (success ? 'OK' : 'PENDIENTE'),
+      helperText: helper,
+      signal: signal,
+      accentColor: const Color(0xFFF5A04A),
+      steps: [
+        OperationStepData(
+          label: 'Ingresar o escanear',
+          icon: Icons.qr_code_scanner_rounded,
+          done: typed || detected,
+          active: !typed && !detected,
+        ),
+        OperationStepData(
+          label: 'Detectar PCP/Kardex',
+          icon: Icons.confirmation_number_rounded,
+          done: detected,
+          active: typed && !detected,
+        ),
+        OperationStepData(
+          label: 'Consultar stock',
+          icon: Icons.manage_search_rounded,
+          done: consulted,
+          active:
+              state.status == ConsultaStockStatus.loading ||
+              (detected && !consulted),
+        ),
+        OperationStepData(
+          label: 'Revisar resultado',
+          icon: Icons.inventory_2_rounded,
+          done: success,
+          active: success,
+        ),
+      ],
+      summary: [
+        OperationSummaryItem(
+          label: 'Consulta',
+          value: state.ultimaConsulta,
+          icon: Icons.search_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'PCP',
+          value: state.codigoPcpDetectado,
+          icon: Icons.confirmation_number_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Kardex',
+          value: state.codigoKardexDetectado,
+          icon: Icons.qr_code_2_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Formato',
+          value: state.inputRaw.contains(',') ? 'QR completo' : 'Manual',
+          icon: Icons.data_object_rounded,
         ),
       ],
     );
