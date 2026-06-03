@@ -7,6 +7,7 @@ import '../../../data/datasources/remote/movimiento_telas_remote_datasource.dart
 import '../../providers/auth_provider.dart';
 import '../../providers/movimiento_telas_provider.dart';
 import '../../widgets/enterprise_backdrop.dart';
+import '../../widgets/production/production_visuals.dart';
 
 class IngresoTelasScreen extends ConsumerStatefulWidget {
   const IngresoTelasScreen({super.key});
@@ -180,49 +181,12 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
   }
 
   Widget _header(BuildContext context) {
-    return Row(
-      children: [
-        IconButton(
-          onPressed: () => Navigator.pop(context),
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.white,
-            side: const BorderSide(color: CorporateTokens.borderSoft),
-          ),
-          icon: const Icon(
-            Icons.arrow_back_rounded,
-            color: CorporateTokens.navy900,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Ingreso de Telas',
-                style: TextStyle(
-                  color: CorporateTokens.navy900,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 3),
-              const Text(
-                'Registro de corte - movimientoTelas (modo nuevo)',
-                style: TextStyle(color: CorporateTokens.slate500, fontSize: 12),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  _pill('Enterprise 2026'),
-                  const SizedBox(width: 6),
-                  _pill('Operacion critica'),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
+    return ProductionHeader(
+      title: 'Ingreso de Telas',
+      subtitle: 'Registro de corte, calidad, QR e impresion',
+      icon: Icons.add_box_rounded,
+      onBack: () => Navigator.pop(context),
+      accentColor: const Color(0xFF0EA5A4),
     );
   }
 
@@ -960,109 +924,26 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
   }
 
   Widget _card(String title, Widget child) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFEFFFF), Color(0xFFF5F9FF)],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFD6E3F5)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A05102A),
-            blurRadius: 22,
-            offset: Offset(0, 8),
-          ),
-          BoxShadow(
-            color: Color(0x140A4EA3),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEAF3FF),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFFCAE0FA)),
-            ),
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                color: CorporateTokens.navy900,
-                fontSize: 13,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          child,
-        ],
-      ),
+    return ProductionCard(
+      title: title,
+      icon: _cardIcon(title),
+      accentColor: const Color(0xFF0EA5A4),
+      children: [child],
     );
   }
 
   Widget _banner(MovimientoTelasState state) {
-    final isError = (state.errorMessage ?? '').isNotEmpty;
-    final text = isError ? state.errorMessage! : state.message!;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-      decoration: BoxDecoration(
-        color: isError ? const Color(0xFFFFE9E9) : const Color(0xFFE9F8EE),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isError ? const Color(0xFFF8B4B4) : const Color(0xFF9BDBAF),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isError ? Icons.error_outline_rounded : Icons.check_circle_outline,
-            size: 18,
-            color: isError ? const Color(0xFFB91C1C) : const Color(0xFF166534),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                color: CorporateTokens.navy900,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return ProductionStatusBanner(
+      message: state.message,
+      errorMessage: state.errorMessage,
     );
   }
 
-  Widget _pill(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEAF3FF),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFCAE0FA)),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Color(0xFF1A4A86),
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
+  IconData _cardIcon(String title) {
+    final value = title.toLowerCase();
+    if (value.contains('qr')) return Icons.qr_code_rounded;
+    if (value.contains('corte')) return Icons.content_cut_rounded;
+    return Icons.assignment_rounded;
   }
 
   Widget _primaryButton({

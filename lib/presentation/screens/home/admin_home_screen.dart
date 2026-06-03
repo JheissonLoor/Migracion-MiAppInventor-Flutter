@@ -540,6 +540,7 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen>
             Icons.precision_manufacturing_outlined,
             '/ingreso_telar',
           ),
+          _Module('Corte de Rollo', Icons.call_split_rounded, '/corte_rollo'),
           _Module('Urdido', Icons.settings_rounded, '/urdido'),
           _Module(
             'Historial Urdido',

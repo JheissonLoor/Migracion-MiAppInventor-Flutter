@@ -6,6 +6,7 @@ import '../../../data/models/almacen_mov_queue_models.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/salida_almacen_provider.dart';
 import '../../widgets/enterprise_backdrop.dart';
+import '../../widgets/production/production_visuals.dart';
 import '../../widgets/scanner/qr_scanner_page.dart';
 
 class SalidaAlmacenScreen extends ConsumerStatefulWidget {
@@ -406,88 +407,19 @@ class _SalidaAlmacenScreenState extends ConsumerState<SalidaAlmacenScreen>
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Row(
-      children: [
-        IconButton(
-          onPressed: () => Navigator.pop(context),
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.white,
-            side: const BorderSide(color: CorporateTokens.borderSoft),
-          ),
-          icon: const Icon(
-            Icons.arrow_back_rounded,
-            color: CorporateTokens.navy900,
-          ),
-        ),
-        const SizedBox(width: 10),
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Salida de Almacen',
-                style: TextStyle(
-                  color: CorporateTokens.navy900,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              SizedBox(height: 3),
-              Text(
-                'Flujo MIT 1:1: escaneo, validacion y envio seguro',
-                style: TextStyle(color: CorporateTokens.slate500, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-      ],
+    return ProductionHeader(
+      title: 'Salida de Almacen',
+      subtitle: 'Escaneo, ubicacion destino y validacion segura',
+      icon: Icons.local_shipping_rounded,
+      onBack: () => Navigator.pop(context),
+      accentColor: const Color(0xFF2F7C92),
     );
   }
 
   Widget _buildStatusBanner(SalidaAlmacenState state) {
-    final hasError = state.errorMessage?.trim().isNotEmpty == true;
-    final hasInfo = state.infoMessage?.trim().isNotEmpty == true;
-    if (!hasError && !hasInfo) {
-      return const SizedBox.shrink();
-    }
-
-    final isError = hasError;
-    final text = hasError ? state.errorMessage! : state.infoMessage!;
-
-    final bgColor = isError ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7);
-    final borderColor =
-        isError ? const Color(0xFFFCA5A5) : const Color(0xFF86EFAC);
-    final iconColor =
-        isError ? const Color(0xFFDC2626) : const Color(0xFF16A34A);
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isError ? Icons.error_outline_rounded : Icons.check_circle_rounded,
-            color: iconColor,
-            size: 18,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                color: CorporateTokens.navy900,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return ProductionStatusBanner(
+      message: state.infoMessage,
+      errorMessage: state.errorMessage,
     );
   }
 
@@ -700,30 +632,19 @@ class _SalidaAlmacenScreenState extends ConsumerState<SalidaAlmacenScreen>
     required String title,
     required List<Widget> children,
   }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: CorporateTokens.borderSoft),
-        boxShadow: CorporateTokens.cardShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: CorporateTokens.navy900,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 10),
-          ...children,
-        ],
-      ),
+    return ProductionCard(
+      title: title,
+      icon: _dataCardIcon(title),
+      accentColor: const Color(0xFF2F7C92),
+      children: children,
     );
+  }
+
+  IconData _dataCardIcon(String title) {
+    final value = title.toLowerCase();
+    if (value.contains('ubicacion')) return Icons.pin_drop_rounded;
+    if (value.contains('codigo')) return Icons.inventory_2_rounded;
+    return Icons.assignment_rounded;
   }
 
   Widget _buildUltimaUbicacion(SalidaAlmacenState state) {

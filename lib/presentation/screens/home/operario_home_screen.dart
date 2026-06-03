@@ -398,6 +398,14 @@ class _OperarioHomeScreenState extends ConsumerState<OperarioHomeScreen>
       );
       modules.add(
         const _OperarioModule(
+          icon: Icons.call_split_rounded,
+          label: 'Corte de Rollo',
+          route: '/corte_rollo',
+          color: Color(0xFF2F7C92),
+        ),
+      );
+      modules.add(
+        const _OperarioModule(
           icon: Icons.precision_manufacturing_rounded,
           label: 'Ingreso Urdidora',
           route: '/urdido',

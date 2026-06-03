@@ -48,9 +48,15 @@ class TelaresSearchData {
 class IngresoTelarProgresoData {
   final String telar;
   final String articulo;
-  final String hilo;
+  final String hilos;
   final String titulo;
-  final String metraje;
+  final String mts;
+  final String material;
+  final String color;
+  final String pas;
+  final String anchoPeine;
+  final String trama;
+  final String parcial;
   final String fechaInicio;
   final String fechaFinal;
   final String pesoTotal;
@@ -58,9 +64,15 @@ class IngresoTelarProgresoData {
   const IngresoTelarProgresoData({
     this.telar = '',
     this.articulo = '',
-    this.hilo = '',
+    this.hilos = '',
     this.titulo = '',
-    this.metraje = '',
+    this.mts = '',
+    this.material = '',
+    this.color = '',
+    this.pas = '',
+    this.anchoPeine = '',
+    this.trama = '',
+    this.parcial = '',
     this.fechaInicio = '',
     this.fechaFinal = '',
     this.pesoTotal = '',
@@ -70,9 +82,15 @@ class IngresoTelarProgresoData {
     return IngresoTelarProgresoData(
       telar: (map['telar'] ?? '').toString().trim(),
       articulo: (map['articulo'] ?? '').toString().trim(),
-      hilo: (map['hilo'] ?? '').toString().trim(),
+      hilos: (map['hilos'] ?? map['hilo'] ?? '').toString().trim(),
       titulo: (map['titulo'] ?? '').toString().trim(),
-      metraje: (map['metraje'] ?? '').toString().trim(),
+      mts: (map['mts'] ?? map['metraje'] ?? '').toString().trim(),
+      material: (map['material'] ?? '').toString().trim(),
+      color: (map['color'] ?? '').toString().trim(),
+      pas: (map['pas'] ?? '').toString().trim(),
+      anchoPeine: (map['ancho_peine'] ?? '').toString().trim(),
+      trama: (map['trama'] ?? '').toString().trim(),
+      parcial: (map['parcial'] ?? '').toString().trim(),
       fechaInicio: (map['fecha_inicio'] ?? '').toString().trim(),
       fechaFinal: (map['fecha_final'] ?? '').toString().trim(),
       pesoTotal: (map['peso_total'] ?? '').toString().trim(),
@@ -82,9 +100,15 @@ class IngresoTelarProgresoData {
   bool get hasData =>
       telar.isNotEmpty ||
       articulo.isNotEmpty ||
-      hilo.isNotEmpty ||
+      hilos.isNotEmpty ||
       titulo.isNotEmpty ||
-      metraje.isNotEmpty ||
+      mts.isNotEmpty ||
+      material.isNotEmpty ||
+      color.isNotEmpty ||
+      pas.isNotEmpty ||
+      anchoPeine.isNotEmpty ||
+      trama.isNotEmpty ||
+      parcial.isNotEmpty ||
       fechaInicio.isNotEmpty ||
       fechaFinal.isNotEmpty ||
       pesoTotal.isNotEmpty;
@@ -93,13 +117,134 @@ class IngresoTelarProgresoData {
     return {
       'telar': telar,
       'articulo': articulo,
-      'hilo': hilo,
+      'hilos': hilos,
       'titulo': titulo,
-      'metraje': metraje,
+      'mts': mts,
+      'material': material,
+      'color': color,
+      'pas': pas,
+      'ancho_peine': anchoPeine,
+      'trama': trama,
+      'parcial': parcial,
       'fecha_inicio': fechaInicio,
       'fecha_final': fechaFinal,
       'peso_total': pesoTotal,
     };
+  }
+}
+
+class IngresoTelarLookupData {
+  final String message;
+  final IngresoTelarProgresoData? progress;
+  final String articuloSugerido;
+  final String pasSugerido;
+  final String anchoPeineSugerido;
+
+  const IngresoTelarLookupData({
+    this.message = '',
+    this.progress,
+    this.articuloSugerido = '',
+    this.pasSugerido = '',
+    this.anchoPeineSugerido = '',
+  });
+
+  bool get hasProgress => progress?.hasData == true;
+}
+
+class CorteRolloResult {
+  final bool success;
+  final String message;
+  final String codigoHijo;
+  final String restante;
+
+  const CorteRolloResult({
+    required this.success,
+    this.message = '',
+    this.codigoHijo = '',
+    this.restante = '',
+  });
+
+  factory CorteRolloResult.fromMap(Map<String, dynamic> map) {
+    return CorteRolloResult(
+      success: map['success'] == true || map['message'] == 'ok',
+      message: (map['message'] ?? map['mensaje'] ?? '').toString().trim(),
+      codigoHijo: (map['codigo_hijo'] ?? '').toString().trim(),
+      restante: (map['restante'] ?? '').toString().trim(),
+    );
+  }
+}
+
+class TrazabilidadRolloHijo {
+  final String codigoHijo;
+  final String metros;
+  final String fecha;
+  final String destino;
+
+  const TrazabilidadRolloHijo({
+    this.codigoHijo = '',
+    this.metros = '',
+    this.fecha = '',
+    this.destino = '',
+  });
+
+  factory TrazabilidadRolloHijo.fromMap(Map<String, dynamic> map) {
+    return TrazabilidadRolloHijo(
+      codigoHijo: (map['codigo_hijo'] ?? '').toString().trim(),
+      metros: (map['metros'] ?? '').toString().trim(),
+      fecha: (map['fecha'] ?? '').toString().trim(),
+      destino: (map['destino'] ?? '').toString().trim(),
+    );
+  }
+}
+
+class TrazabilidadRolloData {
+  final bool success;
+  final String message;
+  final String codigoMadre;
+  final String totalMadre;
+  final String consumido;
+  final String restante;
+  final String desperdicio;
+  final String numHijos;
+  final List<TrazabilidadRolloHijo> hijos;
+
+  const TrazabilidadRolloData({
+    required this.success,
+    this.message = '',
+    this.codigoMadre = '',
+    this.totalMadre = '',
+    this.consumido = '',
+    this.restante = '',
+    this.desperdicio = '',
+    this.numHijos = '',
+    this.hijos = const [],
+  });
+
+  factory TrazabilidadRolloData.fromMap(Map<String, dynamic> map) {
+    final hijosRaw = map['hijos'];
+    final hijos =
+        hijosRaw is List
+            ? hijosRaw
+                .whereType<Map>()
+                .map(
+                  (item) => TrazabilidadRolloHijo.fromMap(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .toList(growable: false)
+            : <TrazabilidadRolloHijo>[];
+
+    return TrazabilidadRolloData(
+      success: map['success'] == true || map['message'] == 'ok',
+      message: (map['message'] ?? map['mensaje'] ?? '').toString().trim(),
+      codigoMadre: (map['codigo_madre'] ?? '').toString().trim(),
+      totalMadre: (map['total_madre'] ?? '').toString().trim(),
+      consumido: (map['consumido'] ?? '').toString().trim(),
+      restante: (map['restante'] ?? '').toString().trim(),
+      desperdicio: (map['desperdicio'] ?? '').toString().trim(),
+      numHijos: (map['num_hijos'] ?? '').toString().trim(),
+      hijos: hijos,
+    );
   }
 }
 
@@ -396,21 +541,21 @@ class ProduccionRemoteDatasource {
     return _extractMessage(response);
   }
 
-  Future<IngresoTelarProgresoData?> cargarProgresoIngresoTelar(
-    String operario,
+  Future<IngresoTelarLookupData> cargarProgresoIngresoTelar(
+    String telar,
   ) async {
-    final safeOperario = operario.trim();
-    if (safeOperario.isEmpty) {
-      return null;
+    final safeTelar = telar.trim();
+    if (safeTelar.isEmpty) {
+      return const IngresoTelarLookupData(message: 'sin_telar');
     }
 
     final response = await _client.get(
-      '${ApiRoutes.telarCargarProgreso}?operario=${Uri.encodeQueryComponent(safeOperario)}',
+      '${ApiRoutes.telarCargarProgreso}?telar=${Uri.encodeQueryComponent(safeTelar)}',
     );
     if (!response.success) {
       final message = (response.message ?? '').trim().toLowerCase();
       if (message == 'sin_progreso') {
-        return null;
+        return const IngresoTelarLookupData(message: 'sin_progreso');
       }
       throw Exception(
         response.message ?? 'No se pudo cargar progreso de telar',
@@ -420,7 +565,13 @@ class ProduccionRemoteDatasource {
     final root = _normalizeMap(response.data);
     final message = (root['message'] ?? '').toString().trim().toLowerCase();
     if (message == 'sin_progreso') {
-      return null;
+      return IngresoTelarLookupData(
+        message: message,
+        articuloSugerido: (root['articulo_sugerido'] ?? '').toString().trim(),
+        pasSugerido: (root['pas_sugerido'] ?? '').toString().trim(),
+        anchoPeineSugerido:
+            (root['ancho_peine_sugerido'] ?? '').toString().trim(),
+      );
     }
     if (message != 'ok') {
       throw Exception(
@@ -431,9 +582,55 @@ class ProduccionRemoteDatasource {
     final data = _normalizeMap(root['data']);
     final parsed = IngresoTelarProgresoData.fromMap(data);
     if (!parsed.hasData) {
-      return null;
+      return IngresoTelarLookupData(
+        message: 'sin_progreso',
+        articuloSugerido: (root['articulo_sugerido'] ?? '').toString().trim(),
+        pasSugerido: (root['pas_sugerido'] ?? '').toString().trim(),
+        anchoPeineSugerido:
+            (root['ancho_peine_sugerido'] ?? '').toString().trim(),
+      );
     }
-    return parsed;
+    return IngresoTelarLookupData(message: message, progress: parsed);
+  }
+
+  Future<List<String>> cargarArticulosTelar() async {
+    final response = await _client.get(ApiRoutes.telarArticulos);
+    if (!response.success) {
+      throw Exception(response.message ?? 'No se pudo cargar articulos telar');
+    }
+
+    final root = _normalizeMap(response.data);
+    final list = _extractStringList(root['articulos']);
+    if (list.isNotEmpty) {
+      return list;
+    }
+    return _extractStringList(root['articulos_csv'] ?? response.responseData);
+  }
+
+  Future<List<String>> cargarTitulosTelar() {
+    return _cargarListaTelar(ApiRoutes.telarTitulos, 'titulos');
+  }
+
+  Future<List<String>> cargarMaterialesTelar() {
+    return _cargarListaTelar(ApiRoutes.telarMateriales, 'materiales');
+  }
+
+  Future<List<String>> cargarColoresTelar({String query = ''}) async {
+    final suffix =
+        query.trim().isEmpty
+            ? ''
+            : '?q=${Uri.encodeQueryComponent(query.trim())}';
+    return _cargarListaTelar('${ApiRoutes.telarColores}$suffix', 'colores');
+  }
+
+  Future<List<String>> _cargarListaTelar(String endpoint, String nombre) async {
+    final response = await _client.get(endpoint);
+    if (!response.success) {
+      throw Exception(response.message ?? 'No se pudo cargar $nombre');
+    }
+
+    final root = _normalizeMap(response.data);
+    return _extractStringList(root['data'] ?? response.responseData);
   }
 
   Future<String> obtenerArticuloActualTelar(String telar) async {
@@ -479,6 +676,56 @@ class ProduccionRemoteDatasource {
       );
     }
     return _extractMessage(response);
+  }
+
+  Future<CorteRolloResult> cortarRollo({
+    required String codigoMadre,
+    required String metros,
+    required String destino,
+    required String usuario,
+  }) async {
+    final response = await _client.post(
+      ApiRoutes.cortarRollo,
+      data: ApiPayloads.cortarRollo(
+        codigoMadre: codigoMadre,
+        metros: metros,
+        destino: destino,
+        usuario: usuario,
+      ),
+    );
+    if (!response.success) {
+      throw Exception(response.message ?? 'No se pudo cortar el rollo');
+    }
+
+    final root = _normalizeMap(response.data);
+    final result = CorteRolloResult.fromMap(root);
+    if (!result.success && result.message.isNotEmpty) {
+      throw Exception(result.message);
+    }
+    return result;
+  }
+
+  Future<TrazabilidadRolloData> consultarTrazabilidadRollo(
+    String codigo,
+  ) async {
+    final safeCodigo = codigo.trim();
+    if (safeCodigo.isEmpty) {
+      throw Exception('Ingrese codigo madre o sub-rollo');
+    }
+
+    final response = await _client.get(
+      '${ApiRoutes.trazabilidadRollo}?codigo=${Uri.encodeQueryComponent(safeCodigo)}',
+    );
+    if (!response.success) {
+      throw Exception(response.message ?? 'No se pudo consultar trazabilidad');
+    }
+
+    final root = _normalizeMap(response.data);
+    final data = TrazabilidadRolloData.fromMap(root);
+    if (!data.success && data.message.isNotEmpty) {
+      throw Exception(data.message);
+    }
+    return data;
   }
 
   Future<String> consultarHistorialUrdidoOperario(String operario) async {

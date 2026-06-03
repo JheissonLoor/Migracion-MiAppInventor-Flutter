@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/ingreso_telar_provider.dart';
 import '../../widgets/enterprise_backdrop.dart';
+import '../../widgets/production/production_visuals.dart';
 
 class IngresoTelarScreen extends ConsumerStatefulWidget {
   const IngresoTelarScreen({super.key});
@@ -34,13 +35,12 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
       vsync: this,
       duration: const Duration(milliseconds: 720),
     )..forward();
-
     _fadeAnimation = CurvedAnimation(
       parent: _entryController,
       curve: Curves.easeOutCubic,
     );
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.03),
+      begin: const Offset(0, 0.035),
       end: Offset.zero,
     ).animate(_fadeAnimation);
   }
@@ -61,10 +61,7 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
     final usuario = ref.watch(authProvider).user?.usuario ?? '';
 
     ref.listen<IngresoTelarState>(ingresoTelarProvider, (previous, next) {
-      if (!mounted) {
-        return;
-      }
-      if (previous?.fields != next.fields) {
+      if (mounted && previous?.fields != next.fields) {
         _syncControllers(next.fields);
       }
     });
@@ -72,10 +69,7 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
     if (!_requestedInit && usuario.trim().isNotEmpty) {
       _requestedInit = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) {
-          return;
-        }
-        notifier.inicializar(usuario);
+        if (mounted) notifier.inicializar(usuario);
       });
     }
 
@@ -92,23 +86,28 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
                   child: Column(
                     children: [
-                      _buildHeader(context),
+                      _header(context, state, notifier),
                       const SizedBox(height: 10),
-                      _buildStateRow(state),
+                      _stateStrip(state),
                       if (_hasBanner(state)) ...[
                         const SizedBox(height: 10),
-                        _buildStatusBanner(state),
+                        _statusBanner(state),
                       ],
                       const SizedBox(height: 10),
                       Expanded(
                         child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
                           child: Column(
                             children: [
-                              _buildDatosCard(state, notifier),
+                              _datosTelar(state, notifier),
                               const SizedBox(height: 10),
-                              _buildFechasCard(state, notifier),
+                              _materialColor(state, notifier),
                               const SizedBox(height: 10),
-                              _buildActionCard(state, notifier, usuario),
+                              _proceso(state, notifier),
+                              const SizedBox(height: 10),
+                              _trama(state, notifier),
+                              const SizedBox(height: 10),
+                              _acciones(state, notifier, usuario),
                             ],
                           ),
                         ),
@@ -124,53 +123,42 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    return Row(
-      children: [
-        IconButton(
-          onPressed: () => Navigator.pop(context),
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.white,
-            side: const BorderSide(color: CorporateTokens.borderSoft),
-          ),
-          icon: const Icon(
-            Icons.arrow_back_rounded,
-            color: CorporateTokens.navy900,
-          ),
+  Widget _header(
+    BuildContext context,
+    IngresoTelarState state,
+    IngresoTelarNotifier notifier,
+  ) {
+    return ProductionHeader(
+      title: 'Ingreso Telar',
+      subtitle: 'Flujo MIT renovado: telar, material, proceso y trama',
+      icon: Icons.precision_manufacturing_outlined,
+      onBack: () => Navigator.pop(context),
+      accentColor: const Color(0xFFC18B61),
+      trailing: IconButton(
+        tooltip: 'Recargar catalogos',
+        onPressed: state.isBusy ? null : notifier.cargarCatalogos,
+        style: IconButton.styleFrom(
+          backgroundColor: const Color(0xFFEFF6FF),
+          foregroundColor: CorporateTokens.cobalt600,
         ),
-        const SizedBox(width: 10),
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Ingreso Telar',
-                style: TextStyle(
-                  color: CorporateTokens.navy900,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              SizedBox(height: 3),
-              Text(
-                'Flujo MIT 1:1 con UI corporativa moderna',
-                style: TextStyle(color: CorporateTokens.slate500, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-      ],
+        icon:
+            state.isLoadingCatalogs
+                ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+                : const Icon(Icons.sync_rounded),
+      ),
     );
   }
 
-  Widget _buildStateRow(IngresoTelarState state) {
-    final isCompletado = state.estadoActual.toUpperCase() == 'COMPLETADO';
-    final isProgreso = state.estadoActual.toUpperCase() == 'EN PROGRESO';
-
+  Widget _stateStrip(IngresoTelarState state) {
+    final status = state.estadoActual.toUpperCase();
     final color =
-        isCompletado
+        status == 'COMPLETADO'
             ? const Color(0xFF16A34A)
-            : isProgreso
+            : status == 'EN PROGRESO'
             ? CorporateTokens.cobalt600
             : CorporateTokens.slate500;
 
@@ -179,29 +167,53 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: CorporateTokens.borderSoft),
         boxShadow: CorporateTokens.cardShadow,
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.flag_rounded,
-            size: 18,
-            color: CorporateTokens.navy900,
-          ),
-          const SizedBox(width: 8),
-          const Text(
-            'Estado actual:',
-            style: TextStyle(
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
               color: CorporateTokens.navy900,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.precision_manufacturing_rounded,
+              size: 18,
+              color: Colors.white,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Estado del registro',
+                  style: TextStyle(
+                    color: CorporateTokens.navy900,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  state.catalogsLoaded
+                      ? 'Catalogos listos para operacion'
+                      : 'Esperando catalogos de produccion',
+                  style: const TextStyle(
+                    color: CorporateTokens.slate500,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(999),
@@ -212,7 +224,7 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
               style: TextStyle(
                 color: color,
                 fontSize: 12,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w900,
               ),
             ),
           ),
@@ -226,166 +238,256 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
         (state.message?.trim().isNotEmpty == true);
   }
 
-  Widget _buildStatusBanner(IngresoTelarState state) {
-    final isError = state.errorMessage?.trim().isNotEmpty == true;
-    final text = isError ? state.errorMessage! : state.message!;
+  Widget _statusBanner(IngresoTelarState state) {
+    return ProductionStatusBanner(
+      message: state.message,
+      errorMessage: state.errorMessage,
+    );
+  }
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: isError ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isError ? const Color(0xFFFCA5A5) : const Color(0xFF86EFAC),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isError ? Icons.error_outline_rounded : Icons.check_circle_rounded,
-            size: 18,
-            color: isError ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                color: CorporateTokens.navy900,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+  Widget _datosTelar(IngresoTelarState state, IngresoTelarNotifier notifier) {
+    return _section(
+      step: '01',
+      title: 'Datos del telar',
+      subtitle: 'Ingrese el telar y cargue progreso o sugeridos.',
+      icon: Icons.factory_rounded,
+      child: LayoutBuilder(
+        builder: (context, c) {
+          return Column(
+            children: [
+              _row(c.maxWidth, [
+                _field(
+                  keyName: 'telar',
+                  label: 'Num. telar',
+                  hint: 'Ej: 49',
+                  icon: Icons.settings_input_component_rounded,
+                  keyboardType: TextInputType.number,
+                  notifier: notifier,
+                  enabled: !state.isBusy,
+                  onEditingComplete: notifier.cargarProgresoPorTelar,
+                ),
+                _miniAction(
+                  label:
+                      state.status == IngresoTelarStatus.loadingProgress
+                          ? 'Buscando...'
+                          : 'Cargar telar',
+                  icon: Icons.manage_search_rounded,
+                  busy: state.status == IngresoTelarStatus.loadingProgress,
+                  enabled: !state.isBusy,
+                  onPressed: notifier.cargarProgresoPorTelar,
+                ),
+              ]),
+              const SizedBox(height: 10),
+              _catalogField(
+                keyName: 'articulo',
+                label: 'Articulo',
+                hint: 'Seleccionar articulo',
+                icon: Icons.assignment_turned_in_rounded,
+                values: state.articulos,
+                notifier: notifier,
+                enabled: !state.isBusy,
               ),
-            ),
-          ),
-        ],
+              const SizedBox(height: 10),
+              _row(c.maxWidth, [
+                _field(
+                  keyName: 'pas',
+                  label: 'PAS',
+                  hint: 'Auto/sugerido',
+                  icon: Icons.view_week_rounded,
+                  notifier: notifier,
+                  enabled: !state.isBusy,
+                ),
+                _field(
+                  keyName: 'ancho_peine',
+                  label: 'Ancho peine',
+                  hint: 'Auto/sugerido',
+                  icon: Icons.straighten_rounded,
+                  notifier: notifier,
+                  enabled: !state.isBusy,
+                ),
+              ]),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildDatosCard(
+  Widget _materialColor(
     IngresoTelarState state,
     IngresoTelarNotifier notifier,
   ) {
-    return _buildCard(
-      title: 'Datos de telar',
-      subtitle: 'Se autocompleta Articulo desde el numero de telar',
-      child: Column(
-        children: [
-          _buildTextField(
-            keyName: 'telar',
-            label: 'Telar',
-            hint: 'Numero de telar',
-            icon: Icons.precision_manufacturing_rounded,
-            keyboardType: TextInputType.number,
-            notifier: notifier,
-            enabled: !state.isBusy,
-            onEditingComplete: () => notifier.buscarArticuloActual(),
-            suffixIcon: IconButton(
-              onPressed:
-                  state.isBusy ? null : () => notifier.buscarArticuloActual(),
-              tooltip: 'Buscar articulo del telar',
-              icon: const Icon(Icons.manage_search_rounded),
-            ),
-          ),
-          const SizedBox(height: 9),
-          _buildTextField(
-            keyName: 'articulo',
-            label: 'Articulo',
-            hint: 'Auto-completa al ingresar telar',
-            icon: Icons.category_rounded,
-            notifier: notifier,
-            enabled: !state.isBusy,
-          ),
-          const SizedBox(height: 9),
-          _buildTextField(
-            keyName: 'hilo',
-            label: 'Hilo',
-            hint: 'Hilo',
-            icon: Icons.texture_rounded,
-            notifier: notifier,
-            enabled: !state.isBusy,
-          ),
-          const SizedBox(height: 9),
-          _buildTextField(
-            keyName: 'titulo',
-            label: 'Titulo',
-            hint: 'Titulo',
-            icon: Icons.badge_rounded,
-            notifier: notifier,
-            enabled: !state.isBusy,
-          ),
-          const SizedBox(height: 9),
-          _buildTextField(
-            keyName: 'metraje',
-            label: 'Metraje',
-            hint: 'Metraje',
-            icon: Icons.straighten_rounded,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            notifier: notifier,
-            enabled: !state.isBusy,
-          ),
-        ],
+    return _section(
+      step: '02',
+      title: 'Material y color',
+      subtitle: 'Catalogos reales cargados desde el backend FASE3.',
+      icon: Icons.palette_rounded,
+      child: LayoutBuilder(
+        builder: (context, c) {
+          return Column(
+            children: [
+              _row(c.maxWidth, [
+                _catalogField(
+                  keyName: 'material',
+                  label: 'Material',
+                  hint: 'Ej: ALGODON',
+                  icon: Icons.category_rounded,
+                  values: state.materiales,
+                  notifier: notifier,
+                  enabled: !state.isBusy,
+                ),
+                _catalogField(
+                  keyName: 'titulo',
+                  label: 'Titulo',
+                  hint: 'Ej: 30/1',
+                  icon: Icons.badge_rounded,
+                  values: state.titulos,
+                  notifier: notifier,
+                  enabled: !state.isBusy,
+                ),
+              ]),
+              const SizedBox(height: 10),
+              _catalogField(
+                keyName: 'color',
+                label: 'Color',
+                hint: 'Buscar color',
+                icon: Icons.invert_colors_rounded,
+                values: state.colores,
+                notifier: notifier,
+                enabled: !state.isBusy,
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildFechasCard(
-    IngresoTelarState state,
-    IngresoTelarNotifier notifier,
-  ) {
-    return _buildCard(
-      title: 'Fechas y cierre',
-      subtitle: 'Formato legacy: YYYY-M-D',
-      child: Column(
-        children: [
-          _buildDateField(
-            keyName: 'fecha_inicio',
-            label: 'Fecha inicio',
-            icon: Icons.event_available_rounded,
-            enabled: !state.isBusy,
-            onPick:
-                () => _pickDate(
-                  current: _controllers['fecha_inicio']!.text,
-                  onPicked: notifier.seleccionarFechaInicio,
+  Widget _proceso(IngresoTelarState state, IngresoTelarNotifier notifier) {
+    return _section(
+      step: '03',
+      title: 'Proceso',
+      subtitle: 'Metraje, hilos y peso total del registro.',
+      icon: Icons.timeline_rounded,
+      child: LayoutBuilder(
+        builder: (context, c) {
+          return Column(
+            children: [
+              _row(c.maxWidth, [
+                _field(
+                  keyName: 'hilos',
+                  label: 'Hilos',
+                  hint: 'Cantidad hilos',
+                  icon: Icons.linear_scale_rounded,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  notifier: notifier,
+                  enabled: !state.isBusy,
                 ),
-          ),
-          const SizedBox(height: 9),
-          _buildDateField(
-            keyName: 'fecha_final',
-            label: 'Fecha final',
-            icon: Icons.event_rounded,
-            enabled: !state.isBusy,
-            onPick:
-                () => _pickDate(
-                  current: _controllers['fecha_final']!.text,
-                  onPicked: notifier.seleccionarFechaFinal,
+                _field(
+                  keyName: 'mts',
+                  label: 'Metraje (MTS)',
+                  hint: 'Metros',
+                  icon: Icons.square_foot_rounded,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  notifier: notifier,
+                  enabled: !state.isBusy,
                 ),
-          ),
-          const SizedBox(height: 9),
-          _buildTextField(
-            keyName: 'peso_total',
-            label: 'Peso total',
-            hint: 'Peso total',
-            icon: Icons.scale_rounded,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            notifier: notifier,
-            enabled: !state.isBusy,
-          ),
-        ],
+              ]),
+              const SizedBox(height: 10),
+              _field(
+                keyName: 'peso_total',
+                label: 'Peso total',
+                hint: 'Calculado o manual',
+                icon: Icons.scale_rounded,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                notifier: notifier,
+                enabled: !state.isBusy,
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildActionCard(
+  Widget _trama(IngresoTelarState state, IngresoTelarNotifier notifier) {
+    return _section(
+      step: '04',
+      title: 'Registro trama',
+      subtitle: 'Guardar progreso acumula; completar cierra produccion.',
+      icon: Icons.grain_rounded,
+      child: LayoutBuilder(
+        builder: (context, c) {
+          return Column(
+            children: [
+              _row(c.maxWidth, [
+                _field(
+                  keyName: 'trama',
+                  label: 'Trama nueva',
+                  hint: 'MTS producidos',
+                  icon: Icons.add_chart_rounded,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  notifier: notifier,
+                  enabled: !state.isBusy,
+                ),
+                _readOnly(
+                  keyName: 'parcial',
+                  label: 'Parcial acumulado',
+                  hint: 'Auto desde backend',
+                  icon: Icons.functions_rounded,
+                ),
+              ]),
+              const SizedBox(height: 10),
+              _row(c.maxWidth, [
+                _dateField(
+                  keyName: 'fecha_inicio',
+                  label: 'Fecha inicio',
+                  enabled: !state.isBusy,
+                  onPick:
+                      () => _pickDate(
+                        current: _controllers['fecha_inicio']!.text,
+                        onPicked: notifier.seleccionarFechaInicio,
+                      ),
+                ),
+                _dateField(
+                  keyName: 'fecha_final',
+                  label: 'Fecha final',
+                  enabled: !state.isBusy,
+                  onPick:
+                      () => _pickDate(
+                        current: _controllers['fecha_final']!.text,
+                        onPicked: notifier.seleccionarFechaFinal,
+                      ),
+                ),
+              ]),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _acciones(
     IngresoTelarState state,
     IngresoTelarNotifier notifier,
     String usuario,
   ) {
-    return _buildCard(
-      title: 'Acciones',
+    return _section(
+      step: 'OK',
+      title: 'Acciones de registro',
       subtitle:
-          usuario.trim().isEmpty ? 'Operario sin sesion' : 'Operario: $usuario',
+          usuario.trim().isEmpty
+              ? 'Operario sin sesion'
+              : 'Operario activo: $usuario',
+      icon: Icons.verified_rounded,
       child: Column(
         children: [
           _ActionButton(
@@ -399,19 +501,19 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
             colors: const [Color(0xFF1D9B65), Color(0xFF16A34A)],
             onPressed: notifier.guardarProgreso,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 9),
           _ActionButton(
             label:
                 state.status == IngresoTelarStatus.completing
-                    ? 'Completando registro...'
-                    : 'Completar',
+                    ? 'Completando produccion...'
+                    : 'Completar produccion',
             icon: Icons.task_alt_rounded,
             busy: state.status == IngresoTelarStatus.completing,
             enabled: !state.isBusy,
             colors: CorporateTokens.primaryButtonGradient,
             onPressed: notifier.completarRegistro,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 9),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -425,9 +527,11 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
     );
   }
 
-  Widget _buildCard({
+  Widget _section({
+    required String step,
     required String title,
     required String subtitle,
+    required IconData icon,
     required Widget child,
   }) {
     return Container(
@@ -435,37 +539,170 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: CorporateTokens.borderSoft),
         boxShadow: CorporateTokens.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: CorporateTokens.navy900,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
+          Row(
+            children: [
+              Container(
+                height: 38,
+                width: 38,
+                decoration: BoxDecoration(
+                  color: CorporateTokens.cobalt600.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, size: 20, color: CorporateTokens.cobalt600),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: CorporateTokens.navy900,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: CorporateTokens.slate500,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                decoration: BoxDecoration(
+                  color: CorporateTokens.navy900,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  step,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              color: CorporateTokens.slate500,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           child,
         ],
       ),
     );
   }
 
-  Widget _buildTextField({
+  Widget _row(double width, List<Widget> children) {
+    if (width >= 620) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: _withGaps(
+          children.map((child) => Expanded(child: child)).toList(),
+        ),
+      );
+    }
+    return Column(children: _withGaps(children));
+  }
+
+  List<Widget> _withGaps(List<Widget> children, {double gap = 10}) {
+    final spaced = <Widget>[];
+    for (var index = 0; index < children.length; index++) {
+      if (index > 0) spaced.add(SizedBox(height: gap, width: gap));
+      spaced.add(children[index]);
+    }
+    return spaced;
+  }
+
+  Widget _miniAction({
+    required String label,
+    required IconData icon,
+    required bool busy,
+    required bool enabled,
+    required Future<void> Function() onPressed,
+  }) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        gradient: LinearGradient(colors: CorporateTokens.primaryButtonGradient),
+        boxShadow: [
+          BoxShadow(
+            color: CorporateTokens.cobalt600.withValues(alpha: 0.22),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ElevatedButton.icon(
+        onPressed: enabled ? onPressed : null,
+        icon:
+            busy
+                ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+                : Icon(icon),
+        label: Text(label),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          disabledBackgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          minimumSize: const Size(double.infinity, 56),
+        ),
+      ),
+    );
+  }
+
+  Widget _catalogField({
+    required String keyName,
+    required String label,
+    required String hint,
+    required IconData icon,
+    required List<String> values,
+    required IngresoTelarNotifier notifier,
+    required bool enabled,
+  }) {
+    return _field(
+      keyName: keyName,
+      label: label,
+      hint: hint,
+      icon: icon,
+      notifier: notifier,
+      enabled: enabled,
+      suffixIcon: IconButton(
+        onPressed:
+            enabled
+                ? () => _showPicker(
+                  title: label,
+                  values: values,
+                  current: _controllers[keyName]!.text,
+                  onSelected:
+                      (value) => notifier.seleccionarCatalogo(keyName, value),
+                )
+                : null,
+        icon: const Icon(Icons.keyboard_arrow_down_rounded),
+      ),
+    );
+  }
+
+  Widget _field({
     required String keyName,
     required String label,
     required String hint,
@@ -482,7 +719,10 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
       onChanged: (value) => notifier.actualizarCampo(keyName, value),
       onEditingComplete: onEditingComplete,
       keyboardType: keyboardType,
-      style: const TextStyle(color: CorporateTokens.navy900),
+      style: const TextStyle(
+        color: CorporateTokens.navy900,
+        fontWeight: FontWeight.w700,
+      ),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -492,10 +732,31 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
     );
   }
 
-  Widget _buildDateField({
+  Widget _readOnly({
     required String keyName,
     required String label,
+    required String hint,
     required IconData icon,
+  }) {
+    return TextFormField(
+      controller: _controllers[keyName],
+      readOnly: true,
+      enabled: false,
+      style: const TextStyle(
+        color: CorporateTokens.navy900,
+        fontWeight: FontWeight.w800,
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon, color: CorporateTokens.slate500),
+      ),
+    );
+  }
+
+  Widget _dateField({
+    required String keyName,
+    required String label,
     required bool enabled,
     required VoidCallback onPick,
   }) {
@@ -503,11 +764,17 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
       controller: _controllers[keyName],
       readOnly: true,
       enabled: enabled,
-      style: const TextStyle(color: CorporateTokens.navy900),
+      style: const TextStyle(
+        color: CorporateTokens.navy900,
+        fontWeight: FontWeight.w700,
+      ),
       decoration: InputDecoration(
         labelText: label,
-        hintText: 'YYYY-M-D',
-        prefixIcon: Icon(icon, color: CorporateTokens.slate500),
+        hintText: 'YYYY-MM-DD',
+        prefixIcon: const Icon(
+          Icons.event_available_rounded,
+          color: CorporateTokens.slate500,
+        ),
         suffixIcon: IconButton(
           onPressed: enabled ? onPick : null,
           icon: const Icon(Icons.calendar_month_rounded),
@@ -517,48 +784,170 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
     );
   }
 
+  Future<void> _showPicker({
+    required String title,
+    required List<String> values,
+    required String current,
+    required void Function(String) onSelected,
+  }) async {
+    final queryController = TextEditingController();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        var filtered = values;
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return DraggableScrollableSheet(
+              initialChildSize: 0.72,
+              minChildSize: 0.42,
+              maxChildSize: 0.92,
+              builder: (context, scrollController) {
+                return Container(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    12,
+                    16,
+                    16 + MediaQuery.of(context).viewInsets.bottom,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(26),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 42,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: CorporateTokens.borderSoft,
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Seleccionar $title',
+                        style: const TextStyle(
+                          color: CorporateTokens.navy900,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: queryController,
+                        autofocus: true,
+                        style: const TextStyle(color: CorporateTokens.navy900),
+                        decoration: const InputDecoration(
+                          hintText: 'Buscar...',
+                          prefixIcon: Icon(Icons.search_rounded),
+                        ),
+                        onChanged: (query) {
+                          final needle = query.trim().toUpperCase();
+                          setModalState(() {
+                            filtered =
+                                needle.isEmpty
+                                    ? values
+                                    : values
+                                        .where(
+                                          (item) => item.toUpperCase().contains(
+                                            needle,
+                                          ),
+                                        )
+                                        .toList(growable: false);
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      Expanded(
+                        child:
+                            filtered.isEmpty
+                                ? const Center(
+                                  child: Text(
+                                    'No hay resultados. Puede escribir manualmente.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: CorporateTokens.slate500,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                )
+                                : ListView.separated(
+                                  controller: scrollController,
+                                  itemCount: filtered.length,
+                                  separatorBuilder:
+                                      (_, __) => const Divider(height: 1),
+                                  itemBuilder: (context, index) {
+                                    final value = filtered[index];
+                                    final selected =
+                                        value.trim().toUpperCase() ==
+                                        current.trim().toUpperCase();
+                                    return ListTile(
+                                      leading: Icon(
+                                        selected
+                                            ? Icons.check_circle_rounded
+                                            : Icons.radio_button_unchecked,
+                                        color:
+                                            selected
+                                                ? CorporateTokens.cobalt600
+                                                : CorporateTokens.slate500,
+                                      ),
+                                      title: Text(
+                                        value,
+                                        style: const TextStyle(
+                                          color: CorporateTokens.navy900,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      onTap: () {
+                                        onSelected(value);
+                                        Navigator.pop(context);
+                                      },
+                                    );
+                                  },
+                                ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+    queryController.dispose();
+  }
+
   Future<void> _pickDate({
     required String current,
     required void Function(DateTime) onPicked,
   }) async {
-    final initialDate = _parseLegacyDate(current) ?? DateTime.now();
-    final firstDate = DateTime(2020, 1, 1);
-    final lastDate = DateTime(2100, 12, 31);
-
     final picked = await showDatePicker(
       context: context,
-      initialDate: initialDate,
-      firstDate: firstDate,
-      lastDate: lastDate,
+      initialDate: _parseLegacyDate(current) ?? DateTime.now(),
+      firstDate: DateTime(2020, 1, 1),
+      lastDate: DateTime(2100, 12, 31),
     );
-
-    if (picked != null) {
-      onPicked(picked);
-    }
+    if (picked != null) onPicked(picked);
   }
 
   DateTime? _parseLegacyDate(String raw) {
     final value = raw.trim();
-    if (value.isEmpty) {
-      return null;
-    }
-
+    if (value.isEmpty) return null;
     final parts = value.split('-');
-    if (parts.length != 3) {
-      return null;
-    }
-
+    if (parts.length != 3) return null;
     final year = int.tryParse(parts[0]);
     final month = int.tryParse(parts[1]);
     final day = int.tryParse(parts[2]);
-    if (year == null || month == null || day == null) {
-      return null;
-    }
-
-    if (month < 1 || month > 12 || day < 1 || day > 31) {
-      return null;
-    }
-
+    if (year == null || month == null || day == null) return null;
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
     return DateTime(year, month, day);
   }
 
@@ -596,8 +985,15 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         gradient: LinearGradient(colors: colors),
+        boxShadow: [
+          BoxShadow(
+            color: colors.first.withValues(alpha: 0.25),
+            blurRadius: 18,
+            offset: const Offset(0, 9),
+          ),
+        ],
       ),
       child: ElevatedButton.icon(
         onPressed: enabled ? onPressed : null,
@@ -618,7 +1014,7 @@ class _ActionButton extends StatelessWidget {
           shadowColor: Colors.transparent,
           disabledBackgroundColor: Colors.transparent,
           foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, 48),
+          minimumSize: const Size(double.infinity, 50),
         ),
       ),
     );
@@ -628,10 +1024,16 @@ class _ActionButton extends StatelessWidget {
 const List<String> _fieldOrder = [
   'telar',
   'articulo',
-  'hilo',
+  'pas',
+  'ancho_peine',
+  'material',
+  'color',
+  'hilos',
+  'mts',
   'titulo',
-  'metraje',
+  'peso_total',
+  'trama',
+  'parcial',
   'fecha_inicio',
   'fecha_final',
-  'peso_total',
 ];

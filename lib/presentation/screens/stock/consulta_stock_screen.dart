@@ -6,6 +6,7 @@ import '../../../core/utils/consulta_stock_qr_codec.dart';
 import '../../../data/datasources/remote/legacy_modules_remote_datasource.dart';
 import '../../providers/consulta_stock_provider.dart';
 import '../../widgets/enterprise_backdrop.dart';
+import '../../widgets/production/production_visuals.dart';
 import '../../widgets/scanner/qr_scanner_page.dart';
 
 class ConsultaStockScreen extends ConsumerStatefulWidget {
@@ -110,183 +111,148 @@ class _ConsultaStockScreenState extends ConsumerState<ConsultaStockScreen>
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Row(
-      children: [
-        IconButton(
-          onPressed: () => Navigator.pop(context),
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.white,
-            side: const BorderSide(color: CorporateTokens.borderSoft),
-          ),
-          icon: const Icon(
-            Icons.arrow_back_rounded,
-            color: CorporateTokens.navy900,
-          ),
-        ),
-        const SizedBox(width: 10),
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Consulta Stock PCP',
-                style: TextStyle(
-                  color: CorporateTokens.navy900,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              SizedBox(height: 2),
-              Text(
-                'Flujo legacy MIT con /stock_actual_pcp (19 campos)',
-                style: TextStyle(color: CorporateTokens.slate500, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-      ],
+    return ProductionHeader(
+      title: 'Consulta Stock PCP',
+      subtitle: 'Lectura MIT 19 campos con PCP/Kardex automatico',
+      icon: Icons.manage_search_rounded,
+      onBack: () => Navigator.pop(context),
+      accentColor: const Color(0xFFF5A04A),
     );
   }
 
   Widget _buildSearchCard(ConsultaStockState state) {
     final isLoading = state.status == ConsultaStockStatus.loading;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: Colors.white,
-        border: Border.all(color: CorporateTokens.borderSoft),
-        boxShadow: CorporateTokens.cardShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Codigo PCP / QR',
-            style: TextStyle(
-              color: CorporateTokens.navy900,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
+    return ProductionCard(
+      title: 'Consulta operativa',
+      subtitle: 'Escanee QR completo o ingrese PCP/Kardex manualmente.',
+      icon: Icons.qr_code_scanner_rounded,
+      accentColor: const Color(0xFFF5A04A),
+      children: [
+        const Text(
+          'Codigo PCP / QR',
+          style: TextStyle(
+            color: CorporateTokens.navy900,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
           ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _codigoController,
-            style: const TextStyle(color: CorporateTokens.navy900),
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _buscar(),
-            decoration: InputDecoration(
-              hintText: 'Escanee QR completo o ingrese codigo PCP/Kardex',
-              hintStyle: const TextStyle(color: CorporateTokens.slate300),
-              prefixIcon: const Icon(
-                Icons.qr_code_2_rounded,
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _codigoController,
+          style: const TextStyle(color: CorporateTokens.navy900),
+          textInputAction: TextInputAction.search,
+          onSubmitted: (_) => _buscar(),
+          decoration: InputDecoration(
+            hintText: 'Escanee QR completo o ingrese codigo PCP/Kardex',
+            hintStyle: const TextStyle(color: CorporateTokens.slate300),
+            prefixIcon: const Icon(
+              Icons.qr_code_2_rounded,
+              color: CorporateTokens.cobalt600,
+            ),
+            suffixIcon: IconButton(
+              onPressed: _scanCodigo,
+              tooltip: 'Escanear con camara',
+              icon: const Icon(
+                Icons.camera_alt_rounded,
+                color: CorporateTokens.slate500,
+              ),
+            ),
+            filled: true,
+            fillColor: CorporateTokens.surfaceTop,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: CorporateTokens.borderSoft),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: CorporateTokens.borderSoft),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
                 color: CorporateTokens.cobalt600,
-              ),
-              suffixIcon: IconButton(
-                onPressed: _scanCodigo,
-                tooltip: 'Escanear con camara',
-                icon: const Icon(
-                  Icons.camera_alt_rounded,
-                  color: CorporateTokens.slate500,
-                ),
-              ),
-              filled: true,
-              fillColor: CorporateTokens.surfaceTop,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: CorporateTokens.borderSoft),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: CorporateTokens.borderSoft),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: CorporateTokens.cobalt600,
-                  width: 1.6,
-                ),
+                width: 1.6,
               ),
             ),
           ),
-          if (state.codigoPcpDetectado.trim().isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _detectChip(
-                  label: 'PCP',
-                  value: state.codigoPcpDetectado,
-                  icon: Icons.confirmation_number_rounded,
-                  highlight: true,
-                ),
-                if (state.codigoKardexDetectado.trim().isNotEmpty)
-                  _detectChip(
-                    label: 'Kardex',
-                    value: state.codigoKardexDetectado,
-                    icon: Icons.qr_code_2_rounded,
-                  ),
-              ],
-            ),
-          ],
+        ),
+        if (state.codigoPcpDetectado.trim().isNotEmpty) ...[
           const SizedBox(height: 10),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              Expanded(
-                child: SizedBox(
-                  height: 44,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: CorporateTokens.primaryButtonGradient,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: ElevatedButton.icon(
-                      onPressed: isLoading ? null : _buscar,
-                      icon:
-                          isLoading
-                              ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                              : const Icon(Icons.search_rounded),
-                      label: Text(isLoading ? 'Consultando...' : 'Consultar'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
+              _detectChip(
+                label: 'PCP',
+                value: state.codigoPcpDetectado,
+                icon: Icons.confirmation_number_rounded,
+                highlight: true,
               ),
-              const SizedBox(width: 10),
-              SizedBox(
-                height: 44,
-                child: OutlinedButton(
-                  onPressed: isLoading ? null : _limpiar,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: CorporateTokens.cobalt600,
-                    side: BorderSide(
-                      color: CorporateTokens.cobalt600.withValues(alpha: 0.30),
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text('Limpiar'),
+              if (state.codigoKardexDetectado.trim().isNotEmpty)
+                _detectChip(
+                  label: 'Kardex',
+                  value: state.codigoKardexDetectado,
+                  icon: Icons.qr_code_2_rounded,
                 ),
-              ),
             ],
           ),
         ],
-      ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 44,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: CorporateTokens.primaryButtonGradient,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ElevatedButton.icon(
+                    onPressed: isLoading ? null : _buscar,
+                    icon:
+                        isLoading
+                            ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                            : const Icon(Icons.search_rounded),
+                    label: Text(isLoading ? 'Consultando...' : 'Consultar'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            SizedBox(
+              height: 44,
+              child: OutlinedButton(
+                onPressed: isLoading ? null : _limpiar,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: CorporateTokens.cobalt600,
+                  side: BorderSide(
+                    color: CorporateTokens.cobalt600.withValues(alpha: 0.30),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Limpiar'),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 

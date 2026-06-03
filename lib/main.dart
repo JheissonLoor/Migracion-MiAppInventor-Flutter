@@ -25,6 +25,7 @@ import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/home/admin_home_screen.dart';
 import 'presentation/screens/home/operario_home_screen.dart';
 import 'presentation/screens/produccion/engomado_screen.dart';
+import 'presentation/screens/produccion/corte_rollo_screen.dart';
 import 'presentation/screens/produccion/historial_admin_screen.dart';
 import 'presentation/screens/produccion/historial_telar_screen.dart';
 import 'presentation/screens/produccion/historial_tela_cruda_screen.dart';
@@ -194,6 +195,11 @@ class CoolImportApp extends ConsumerWidget {
             (context) => securedRoute(
               moduleName: 'Ingreso Telar',
               child: const IngresoTelarScreen(),
+            ),
+        '/corte_rollo':
+            (context) => securedRoute(
+              moduleName: 'Corte de Rollo',
+              child: const CorteRolloScreen(),
             ),
 
         // Modulos legacy administrativos / telas

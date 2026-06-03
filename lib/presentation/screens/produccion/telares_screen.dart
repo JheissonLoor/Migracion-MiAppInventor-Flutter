@@ -6,6 +6,7 @@ import '../../../data/models/produccion_queue_models.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/telares_provider.dart';
 import '../../widgets/enterprise_backdrop.dart';
+import '../../widgets/production/production_visuals.dart';
 import '../../widgets/scanner/qr_scanner_page.dart';
 
 class TelaresScreen extends ConsumerStatefulWidget {
@@ -118,98 +119,30 @@ class _TelaresScreenState extends ConsumerState<TelaresScreen>
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Row(
-      children: [
-        IconButton(
-          onPressed: () => Navigator.pop(context),
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.white,
-            side: const BorderSide(color: CorporateTokens.borderSoft),
-          ),
-          icon: const Icon(
-            Icons.arrow_back_rounded,
-            color: CorporateTokens.navy900,
-          ),
+    return ProductionHeader(
+      title: 'Telares',
+      subtitle: 'Control de corte, calidad y cola segura',
+      icon: Icons.grid_view_rounded,
+      onBack: () => Navigator.pop(context),
+      accentColor: const Color(0xFF9A7A57),
+      trailing: IconButton(
+        onPressed: () => Navigator.pushNamed(context, '/historial_telar'),
+        style: IconButton.styleFrom(
+          backgroundColor: const Color(0xFFF8FAFC),
+          side: const BorderSide(color: CorporateTokens.borderSoft),
         ),
-        const SizedBox(width: 10),
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Telares',
-                style: TextStyle(
-                  color: CorporateTokens.navy900,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              SizedBox(height: 3),
-              Text(
-                'Control de corte y calidad con respaldo offline',
-                style: TextStyle(color: CorporateTokens.slate500, fontSize: 12),
-              ),
-            ],
-          ),
+        icon: const Icon(
+          Icons.view_timeline_rounded,
+          color: CorporateTokens.navy900,
         ),
-        IconButton(
-          onPressed: () => Navigator.pushNamed(context, '/historial_telar'),
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.white,
-            side: const BorderSide(color: CorporateTokens.borderSoft),
-          ),
-          icon: const Icon(
-            Icons.view_timeline_rounded,
-            color: CorporateTokens.navy900,
-          ),
-        ),
-      ],
+      ),
     );
   }
 
   Widget _buildStatusBanner(TelaresState state) {
-    final hasError = state.errorMessage?.trim().isNotEmpty == true;
-    final hasInfo = state.message?.trim().isNotEmpty == true;
-    if (!hasError && !hasInfo) {
-      return const SizedBox.shrink();
-    }
-
-    final isError = hasError;
-    final text = hasError ? state.errorMessage! : state.message!;
-    final bgColor = isError ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7);
-    final borderColor =
-        isError ? const Color(0xFFFCA5A5) : const Color(0xFF86EFAC);
-    final iconColor =
-        isError ? const Color(0xFFDC2626) : const Color(0xFF16A34A);
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isError ? Icons.error_outline_rounded : Icons.check_circle_rounded,
-            color: iconColor,
-            size: 18,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                color: CorporateTokens.navy900,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return ProductionStatusBanner(
+      message: state.message,
+      errorMessage: state.errorMessage,
     );
   }
 
@@ -705,30 +638,21 @@ class _TelaresScreenState extends ConsumerState<TelaresScreen>
   }
 
   Widget _buildCard({required String title, required List<Widget> children}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: CorporateTokens.borderSoft),
-        boxShadow: CorporateTokens.cardShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: CorporateTokens.navy900,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 10),
-          ...children,
-        ],
-      ),
+    return ProductionCard(
+      title: title,
+      icon: _cardIcon(title),
+      accentColor: const Color(0xFF9A7A57),
+      children: children,
     );
+  }
+
+  IconData _cardIcon(String title) {
+    final value = title.toLowerCase();
+    if (value.contains('escaneo')) return Icons.qr_code_scanner_rounded;
+    if (value.contains('resumen')) return Icons.analytics_rounded;
+    if (value.contains('registro')) return Icons.fact_check_rounded;
+    if (value.contains('cola')) return Icons.sync_alt_rounded;
+    return Icons.view_agenda_rounded;
   }
 
   Widget _buildTextField({

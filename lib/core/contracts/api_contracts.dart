@@ -34,7 +34,13 @@ class ApiRoutes {
   static const String telarIngreso = '/telar_ingreso';
   static const String telarCargarProgreso = '/telar_cargar_progreso';
   static const String telarArticuloActual = '/telar_articulo_actual';
+  static const String telarArticulos = '/telar_articulos';
   static const String telarHistorialTabla = '/telar_historial_tabla';
+  static const String telarTitulos = '/get_titulos';
+  static const String telarMateriales = '/get_materiales';
+  static const String telarColores = '/get_colores';
+  static const String cortarRollo = '/cortar_rollo';
+  static const String trazabilidadRollo = '/trazabilidad_rollo';
   static const String urdidoHistorial = '/urdido_historial';
   static const String urdidoHistorialTabla = '/urdido_historial_tabla';
   static const String consultaHistorialTelaCruda =
@@ -262,9 +268,14 @@ class ApiPayloads {
   static Map<String, dynamic> ingresoTelar({
     required String telar,
     required String articulo,
-    required String hilo,
+    required String hilos,
     required String titulo,
-    required String metraje,
+    required String mts,
+    required String material,
+    required String color,
+    required String pas,
+    required String anchoPeine,
+    required String trama,
     required String fechaInicio,
     required String fechaFinal,
     required String pesoTotal,
@@ -275,15 +286,38 @@ class ApiPayloads {
     return {
       'telar': telar.trim(),
       'articulo': articulo.trim(),
-      'hilo': hilo.trim(),
+      // Claves FASE3 usadas por MIT actualizado.
+      'hilos': hilos.trim(),
       'titulo': titulo.trim(),
-      'metraje': metraje.trim(),
+      'mts': mts.trim(),
+      'material': material.trim(),
+      'color': color.trim(),
+      'pas': pas.trim(),
+      'ancho_peine': anchoPeine.trim(),
+      'trama': trama.trim(),
+      // Claves legacy para compatibilidad con endpoints intermedios.
+      'hilo': hilos.trim(),
+      'metraje': mts.trim(),
       'fecha_inicio': fechaInicio.trim(),
       'fecha_final': fechaFinal.trim(),
       'peso_total': pesoTotal.trim(),
       'estado': estado.trim(),
       'operario': operario.trim(),
       'accion': accion.trim(),
+    };
+  }
+
+  static Map<String, dynamic> cortarRollo({
+    required String codigoMadre,
+    required String metros,
+    required String destino,
+    required String usuario,
+  }) {
+    return {
+      'codigo_madre': codigoMadre.trim(),
+      'metros': metros.trim(),
+      'destino': destino.trim(),
+      'usuario': usuario.trim(),
     };
   }
 

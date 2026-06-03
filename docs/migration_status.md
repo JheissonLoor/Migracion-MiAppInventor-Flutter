@@ -1,7 +1,7 @@
 # Estado de migracion Flutter - CoolImport PCP
 
-Actualizado: 2026-04-30
-Avance funcional estimado: 98% (paridad funcional MIT cerrada; pendiente piloto real)
+Actualizado: 2026-06-03
+Avance funcional estimado: 99% (paridad MIT actualizada en produccion; pendiente piloto real y reimpresion tela cruda FASE3)
 
 ## Modulos migrados (operativos)
 
@@ -57,9 +57,14 @@ Avance funcional estimado: 98% (paridad funcional MIT cerrada; pendiente piloto 
   - Registro de primer corte y nuevo corte (`/telar_send`).
   - Cola offline + telemetria de reintentos.
 - Ingreso Telar (legacy MIT):
-  - Carga de progreso por operario (`/telar_cargar_progreso`).
-  - Autocompletado de articulo por telar (`/telar_articulo_actual`).
+  - Carga de progreso por telar (`/telar_cargar_progreso?telar=`) segun AIA FIXED.
+  - Catalogos dedicados (`/telar_articulos`, `/get_materiales`, `/get_titulos`, `/get_colores`).
+  - Campos nuevos MIT FASE3: PAS, Ancho Peine, Material, Color, Hilos, MTS, Trama y Parcial.
   - Guardar progreso / completar (`/telar_ingreso`).
+- Corte de Rollo:
+  - Registro de sub-rollo (`/cortar_rollo`).
+  - Consulta de trazabilidad madre/hijos (`/trazabilidad_rollo`).
+  - Pantalla corporativa nueva para corte, restante y detalle de hijos.
 - Historial Telar:
   - Tabla con filtro por telar (`/telar_historial_tabla`).
   - Acceso desde Home y desde la pantalla de Telares.
@@ -128,6 +133,8 @@ Avance funcional estimado: 98% (paridad funcional MIT cerrada; pendiente piloto 
 
 - Piloto operativo en planta con validacion funcional de `admin_users` (alta/edicion/baja).
 - Validar `HistorialAdmin`, `Historial Tela Cruda` y `/generar_kardex` con usuarios reales y red de planta.
+- Validar `Ingreso Telar` FASE3 y `Corte de Rollo` contra PythonAnywhere con datos reales del AIA actualizado.
+- Migrar/Revisar `ReimpresionTela` FASE3 si se habilita para piloto (`/busqueda_tela_cruda`, `/editar_tela_cruda`, `/siguiente_correlativo`).
 - Pruebas de regresion cruzadas de permisos y navegacion por rol en tablets MDM.
 
 ## Riesgos activos
