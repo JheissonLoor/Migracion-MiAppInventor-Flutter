@@ -716,6 +716,15 @@ class SalidaAlmacenNotifier extends StateNotifier<SalidaAlmacenState> {
   Future<void> enviarSalida({required String usuario}) async {
     if (_submitLock || state.isBusy) return;
 
+    if (state.hasQrValido && state.ultimaUbicacion == null) {
+      state = state.copyWith(
+        status: SalidaStatus.error,
+        errorMessage:
+            'Consulte la ultima ubicacion registrada antes de enviar la salida',
+      );
+      return;
+    }
+
     if (!state.isFormValid) {
       final missing = _missingRequiredFields(state.form);
       state = state.copyWith(
