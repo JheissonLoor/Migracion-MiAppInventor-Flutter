@@ -149,6 +149,8 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
                           children: [
                             _buildFlowGuide(state),
                             const SizedBox(height: 10),
+                            _buildSmartAlerts(state),
+                            const SizedBox(height: 10),
                             isTablet
                                 ? Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,6 +202,7 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     MovimientoTelasNotifier notifier,
   ) {
     final isBusy = state.isBusy;
+    final corteReady = _isCorteReady();
     final fallaActual = _fallaPrincipal.text.trim();
     final fallaCatalogoValue =
         state.codigosFalla.contains(fallaActual) ? fallaActual : null;
@@ -418,6 +421,7 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
                   'Num. corte',
                   icon: Icons.pin_rounded,
                   number: true,
+                  readOnly: _codigoBase.text.trim().isNotEmpty,
                 ),
               ],
             ),
@@ -561,7 +565,9 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
                   children: [
                     _primaryButton(
                       onPressed:
-                          isBusy ? null : () => _registrarCorte(notifier),
+                          isBusy || !corteReady
+                              ? null
+                              : () => _confirmarYRegistrarCorte(notifier),
                       icon:
                           state.status == MovimientoTelasStatus.sendingCorte
                               ? const SizedBox(
@@ -596,7 +602,9 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
                   Expanded(
                     child: _primaryButton(
                       onPressed:
-                          isBusy ? null : () => _registrarCorte(notifier),
+                          isBusy || !corteReady
+                              ? null
+                              : () => _confirmarYRegistrarCorte(notifier),
                       icon:
                           state.status == MovimientoTelasStatus.sendingCorte
                               ? const SizedBox(
@@ -633,6 +641,7 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
 
   Widget _qrCard(MovimientoTelasState state, MovimientoTelasNotifier notifier) {
     final isBusy = state.isBusy;
+    final qrReady = _isQrReady();
     return _card(
       'Etiqueta QR',
       Column(
@@ -647,15 +656,20 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
             ),
           ),
           const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: isBusy ? null : () => _generarQr(notifier),
-              icon: const Icon(Icons.qr_code_rounded),
-              label: const Text('Generar QR'),
-              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 46)),
-            ),
-          ),
+          if (state.qrRaw.trim().isEmpty)
+            qrReady
+                ? SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: isBusy ? null : () => _generarQr(notifier),
+                    icon: const Icon(Icons.qr_code_rounded),
+                    label: const Text('Paso 4: generar QR'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 46),
+                    ),
+                  ),
+                )
+                : _disabledContextButton('Complete datos para generar QR'),
           const SizedBox(height: 10),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 260),
@@ -713,58 +727,21 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
                     ),
           ),
           const SizedBox(height: 12),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxWidth < 360) {
-                return Column(
-                  children: [
-                    _primaryButton(
-                      onPressed:
-                          !state.canRegistrarDato || isBusy
-                              ? null
-                              : notifier.registrarDatoQr,
-                      icon: const Icon(Icons.cloud_upload_rounded, size: 18),
-                      label: 'Registrar dato',
-                    ),
-                    const SizedBox(height: 10),
-                    _primaryButton(
-                      onPressed:
-                          !state.canImprimir || isBusy
-                              ? null
-                              : notifier.imprimirEtiqueta,
-                      icon: const Icon(Icons.print_rounded, size: 18),
-                      label: 'Imprimir etiqueta',
-                    ),
-                  ],
-                );
-              }
-              return Row(
-                children: [
-                  Expanded(
-                    child: _primaryButton(
-                      onPressed:
-                          !state.canRegistrarDato || isBusy
-                              ? null
-                              : notifier.registrarDatoQr,
-                      icon: const Icon(Icons.cloud_upload_rounded, size: 18),
-                      label: 'Registrar dato',
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _primaryButton(
-                      onPressed:
-                          !state.canImprimir || isBusy
-                              ? null
-                              : notifier.imprimirEtiqueta,
-                      icon: const Icon(Icons.print_rounded, size: 18),
-                      label: 'Imprimir etiqueta',
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
+          if (state.qrRaw.trim().isNotEmpty && !state.canImprimir)
+            _primaryButton(
+              onPressed:
+                  !state.canRegistrarDato || isBusy
+                      ? null
+                      : notifier.registrarDatoQr,
+              icon: const Icon(Icons.cloud_upload_rounded, size: 18),
+              label: 'Paso 5: registrar dato QR',
+            ),
+          if (state.canImprimir)
+            _primaryButton(
+              onPressed: isBusy ? null : notifier.imprimirEtiqueta,
+              icon: const Icon(Icons.print_rounded, size: 18),
+              label: 'Paso 6: imprimir etiqueta',
+            ),
           const SizedBox(height: 6),
           TextButton.icon(
             onPressed: isBusy ? null : notifier.limpiarWorkflowQr,
@@ -944,6 +921,81 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     );
   }
 
+  Widget _buildSmartAlerts(MovimientoTelasState state) {
+    final alerts = <String>[];
+    final error = (state.errorMessage ?? '').trim();
+    if (error.isNotEmpty) alerts.add(error);
+    if (_codigoBase.text.trim().isEmpty && _numTelar.text.trim().isNotEmpty) {
+      alerts.add('Genere el codigo para bloquear base, correlativo y corte.');
+    }
+    if (_fechaCorte.text.trim().isEmpty) {
+      alerts.add('Fecha de corte pendiente. Seleccionela antes de registrar.');
+    }
+    if (_nombre.text.trim().isNotEmpty) {
+      alerts.add('Revisor autocompletado con el usuario activo.');
+    }
+    if (_isCorteReady()) {
+      alerts.add('Datos de corte completos. Revise y registre el corte.');
+    }
+    if (state.qrRaw.trim().isNotEmpty) {
+      alerts.add('QR generado. Registre el dato antes de imprimir etiqueta.');
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: CorporateTokens.borderSoft),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Alertas operativas',
+            style: TextStyle(
+              color: CorporateTokens.navy900,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...alerts.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Icon(
+                    item == error && error.isNotEmpty
+                        ? Icons.error_outline_rounded
+                        : Icons.info_outline_rounded,
+                    size: 17,
+                    color:
+                        item == error && error.isNotEmpty
+                            ? const Color(0xFFDC2626)
+                            : const Color(0xFF0EA5A4),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: const TextStyle(
+                        color: CorporateTokens.navy900,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFlowGuide(MovimientoTelasState state) {
     final baseReady =
         _numTelar.text.trim().isNotEmpty &&
@@ -1085,6 +1137,33 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     );
   }
 
+  Widget _disabledContextButton(String label) {
+    return Container(
+      width: double.infinity,
+      height: 46,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: CorporateTokens.borderSoft),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.edit_note_rounded, color: CorporateTokens.slate500),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              color: CorporateTokens.slate500,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _input(
     TextEditingController controller,
     String label, {
@@ -1143,6 +1222,9 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
 
   Future<void> _generarCodigo(MovimientoTelasNotifier notifier) async {
     final fecha = _parseDate(_fechaRevisado.text) ?? DateTime.now();
+    if (_fechaCorte.text.trim().isEmpty) {
+      _fechaCorte.text = _formatDate(DateTime.now());
+    }
     await notifier.generarCodigo(
       numTelar: _numTelar.text,
       fechaRevisado: fecha,
@@ -1182,6 +1264,53 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
       fallaPrincipal: _fallaPrincipal.text,
     );
     await notifier.registrarCorte(payload);
+  }
+
+  Future<void> _confirmarYRegistrarCorte(
+    MovimientoTelasNotifier notifier,
+  ) async {
+    final error = _validarCorte();
+    if (error != null) return notifier.notificarError(error);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (dialogContext) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            title: const Text('Confirmar corte'),
+            content: SizedBox(
+              width: 520,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _confirmRow('Codigo', '${_codigoBase.text}${_numCorte.text}'),
+                  _confirmRow('Telar', _numTelar.text),
+                  _confirmRow('OP', '$_op${_opNumero.text}'),
+                  _confirmRow('Articulo', _articulo.text),
+                  _confirmRow('MTS / KG', '${_mts.text} / ${_peso.text}'),
+                  _confirmRow('Revisor', _nombre.text),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Revisar'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                icon: const Icon(Icons.send_rounded),
+                label: const Text('Confirmar registro'),
+              ),
+            ],
+          ),
+    );
+    if (confirmed == true) {
+      await _registrarCorte(notifier);
+    }
   }
 
   void _generarQr(MovimientoTelasNotifier notifier) {
@@ -1226,6 +1355,8 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
   }
 
   bool _isCorteReady() => _validarCorte() == null;
+
+  bool _isQrReady() => _validarQr() == null;
 
   String? _validarQr() {
     if (_codigoBase.text.trim().isEmpty ||
@@ -1275,6 +1406,44 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     _cd = '';
     notifier.resetFormulario();
     setState(() {});
+  }
+
+  Widget _confirmRow(String label, String value) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: CorporateTokens.borderSoft),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: CorporateTokens.slate500,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value.trim().isEmpty ? '-' : value.trim(),
+              style: const TextStyle(
+                color: CorporateTokens.navy900,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   String _formatDate(DateTime date) {

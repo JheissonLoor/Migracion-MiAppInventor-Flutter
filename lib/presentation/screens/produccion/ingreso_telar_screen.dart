@@ -63,6 +63,7 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
     ref.listen<IngresoTelarState>(ingresoTelarProvider, (previous, next) {
       if (mounted && previous?.fields != next.fields) {
         _syncControllers(next.fields);
+        _autofillOperationalDefaults(next, notifier);
       }
     });
 
@@ -89,6 +90,10 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
                       _header(context, state, notifier),
                       const SizedBox(height: 10),
                       _stateStrip(state),
+                      const SizedBox(height: 10),
+                      _buildFlowGuide(state),
+                      const SizedBox(height: 10),
+                      _buildSmartAlerts(state),
                       if (_hasBanner(state)) ...[
                         const SizedBox(height: 10),
                         _statusBanner(state),
@@ -245,7 +250,194 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
     );
   }
 
+  Widget _buildFlowGuide(IngresoTelarState state) {
+    final hasTelar = _fieldValue(state, 'telar').isNotEmpty;
+    final hasArticulo = _fieldValue(state, 'articulo').isNotEmpty;
+    final hasTrama = _fieldValue(state, 'trama').isNotEmpty;
+    final hasFinalDate = _fieldValue(state, 'fecha_final').isNotEmpty;
+    final hasError = (state.errorMessage ?? '').trim().isNotEmpty;
+    final readyToSave = _isProgressReady(state);
+    final readyToComplete = _isCompletionReady(state);
+
+    final signal =
+        hasError
+            ? OperationSignalLevel.error
+            : readyToComplete
+            ? OperationSignalLevel.ready
+            : readyToSave
+            ? OperationSignalLevel.warning
+            : OperationSignalLevel.neutral;
+
+    final helper =
+        hasError
+            ? state.errorMessage!.trim()
+            : readyToComplete
+            ? 'Listo para cerrar produccion. Revise el resumen antes de completar.'
+            : readyToSave
+            ? 'Datos minimos completos. Puede guardar avance de telar.'
+            : hasTelar
+            ? 'Cargue progreso del telar y complete articulo/trama.'
+            : 'Paso inicial: ingrese el telar y cargue progreso o sugeridos.';
+
+    return OperationFlowGuide(
+      title: 'Guia operativa de ingreso telar',
+      statusLabel:
+          hasError
+              ? 'REVISAR'
+              : readyToComplete
+              ? 'LISTO'
+              : readyToSave
+              ? 'EN PROCESO'
+              : 'PENDIENTE',
+      helperText: helper,
+      signal: signal,
+      accentColor: const Color(0xFFC18B61),
+      steps: [
+        OperationStepData(
+          label: 'Ingresar telar',
+          icon: Icons.factory_rounded,
+          done: hasTelar,
+          active: !hasTelar,
+        ),
+        OperationStepData(
+          label: 'Validar articulo',
+          icon: Icons.assignment_turned_in_rounded,
+          done: hasArticulo,
+          active: hasTelar && !hasArticulo,
+        ),
+        OperationStepData(
+          label: 'Registrar trama',
+          icon: Icons.grain_rounded,
+          done: hasTrama,
+          active: hasArticulo && !hasTrama,
+        ),
+        OperationStepData(
+          label: 'Cerrar produccion',
+          icon: Icons.task_alt_rounded,
+          done: readyToComplete,
+          active: readyToSave && !hasFinalDate,
+        ),
+      ],
+      summary: [
+        OperationSummaryItem(
+          label: 'Telar',
+          value: _fieldValue(state, 'telar'),
+          icon: Icons.settings_input_component_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Articulo',
+          value: _fieldValue(state, 'articulo'),
+          icon: Icons.inventory_2_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Estado',
+          value: state.estadoActual,
+          icon: Icons.verified_user_rounded,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSmartAlerts(IngresoTelarState state) {
+    final alerts = <String>[];
+    final isProgressLoaded = _isProgressLoaded(state);
+    final hasTelar = _fieldValue(state, 'telar').isNotEmpty;
+    final readyToSave = _isProgressReady(state);
+    final readyToComplete = _isCompletionReady(state);
+
+    if (!state.catalogsLoaded) {
+      alerts.add(
+        'Catalogos pendientes: puede escribir manualmente, pero conviene recargar antes de operar.',
+      );
+    }
+    if (!hasTelar) {
+      alerts.add('Ingrese numero de telar para activar la carga de progreso.');
+    }
+    if (isProgressLoaded) {
+      alerts.add(
+        'Progreso activo cargado: telar y articulo quedan protegidos para evitar cambios accidentales.',
+      );
+    }
+    if (readyToSave && !readyToComplete) {
+      alerts.add(
+        'Avance listo para guardar. Para completar produccion agregue fecha final.',
+      );
+    }
+    if (readyToComplete) {
+      alerts.add('Semaforo verde: datos listos para completar produccion.');
+    }
+
+    final color =
+        (state.errorMessage ?? '').trim().isNotEmpty
+            ? const Color(0xFFDC2626)
+            : readyToComplete
+            ? const Color(0xFF16A34A)
+            : readyToSave
+            ? const Color(0xFFD97706)
+            : CorporateTokens.cobalt600;
+
+    return AnimatedContainer(
+      duration: CorporateTokens.motionFast,
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(Icons.traffic_rounded, color: color, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  readyToComplete
+                      ? 'Listo para completar'
+                      : readyToSave
+                      ? 'Listo para guardar avance'
+                      : 'Validacion operativa',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          for (final alert in alerts)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 5),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.bolt_rounded, color: color, size: 16),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      alert,
+                      style: const TextStyle(
+                        color: CorporateTokens.navy900,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        height: 1.25,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _datosTelar(IngresoTelarState state, IngresoTelarNotifier notifier) {
+    final lockedByProgress = _isProgressLoaded(state);
+    final hasTelar = _fieldValue(state, 'telar').isNotEmpty;
     return _section(
       step: '01',
       title: 'Datos del telar',
@@ -264,6 +456,7 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
                   keyboardType: TextInputType.number,
                   notifier: notifier,
                   enabled: !state.isBusy,
+                  readOnly: lockedByProgress,
                   onEditingComplete: notifier.cargarProgresoPorTelar,
                 ),
                 _miniAction(
@@ -273,7 +466,7 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
                           : 'Cargar telar',
                   icon: Icons.manage_search_rounded,
                   busy: state.status == IngresoTelarStatus.loadingProgress,
-                  enabled: !state.isBusy,
+                  enabled: !state.isBusy && hasTelar && !lockedByProgress,
                   onPressed: notifier.cargarProgresoPorTelar,
                 ),
               ]),
@@ -286,6 +479,7 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
                 values: state.articulos,
                 notifier: notifier,
                 enabled: !state.isBusy,
+                readOnly: lockedByProgress,
               ),
               const SizedBox(height: 10),
               _row(c.maxWidth, [
@@ -296,6 +490,7 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
                   icon: Icons.view_week_rounded,
                   notifier: notifier,
                   enabled: !state.isBusy,
+                  readOnly: lockedByProgress,
                 ),
                 _field(
                   keyName: 'ancho_peine',
@@ -304,6 +499,7 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
                   icon: Icons.straighten_rounded,
                   notifier: notifier,
                   enabled: !state.isBusy,
+                  readOnly: lockedByProgress,
                 ),
               ]),
             ],
@@ -480,6 +676,16 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
     IngresoTelarNotifier notifier,
     String usuario,
   ) {
+    final readyToSave = _isProgressReady(state);
+    final readyToComplete = _isCompletionReady(state);
+    final canSave =
+        readyToSave && !state.isBusy && state.estadoActual != 'COMPLETADO';
+    final canComplete =
+        readyToComplete && !state.isBusy && state.estadoActual != 'COMPLETADO';
+    final showsSave =
+        readyToSave &&
+        (!readyToComplete || state.estadoActual != 'EN PROGRESO');
+
     return _section(
       step: 'OK',
       title: 'Acciones de registro',
@@ -490,29 +696,52 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
       icon: Icons.verified_rounded,
       child: Column(
         children: [
-          _ActionButton(
-            label:
-                state.status == IngresoTelarStatus.saving
-                    ? 'Guardando progreso...'
-                    : 'Guardar progreso',
-            icon: Icons.save_rounded,
-            busy: state.status == IngresoTelarStatus.saving,
-            enabled: !state.isBusy,
-            colors: const [Color(0xFF1D9B65), Color(0xFF16A34A)],
-            onPressed: notifier.guardarProgreso,
-          ),
-          const SizedBox(height: 9),
-          _ActionButton(
-            label:
-                state.status == IngresoTelarStatus.completing
-                    ? 'Completando produccion...'
-                    : 'Completar produccion',
-            icon: Icons.task_alt_rounded,
-            busy: state.status == IngresoTelarStatus.completing,
-            enabled: !state.isBusy,
-            colors: CorporateTokens.primaryButtonGradient,
-            onPressed: notifier.completarRegistro,
-          ),
+          if (!readyToSave)
+            _disabledContextButton('Complete telar, articulo y trama')
+          else if (showsSave)
+            _ActionButton(
+              label:
+                  state.status == IngresoTelarStatus.saving
+                      ? 'Guardando progreso...'
+                      : 'Revisar y guardar progreso',
+              icon: Icons.save_rounded,
+              busy: state.status == IngresoTelarStatus.saving,
+              enabled: canSave,
+              colors: const [Color(0xFF1D9B65), Color(0xFF16A34A)],
+              onPressed: () async {
+                final confirmed = await _confirmarRegistroTelar(
+                  state: state,
+                  usuario: usuario,
+                  accion: 'guardar progreso',
+                );
+                if (confirmed) {
+                  await notifier.guardarProgreso();
+                }
+              },
+            ),
+          if (readyToComplete) ...[
+            if (showsSave) const SizedBox(height: 9),
+            _ActionButton(
+              label:
+                  state.status == IngresoTelarStatus.completing
+                      ? 'Completando produccion...'
+                      : 'Revisar y completar produccion',
+              icon: Icons.task_alt_rounded,
+              busy: state.status == IngresoTelarStatus.completing,
+              enabled: canComplete,
+              colors: CorporateTokens.primaryButtonGradient,
+              onPressed: () async {
+                final confirmed = await _confirmarRegistroTelar(
+                  state: state,
+                  usuario: usuario,
+                  accion: 'completar produccion',
+                );
+                if (confirmed) {
+                  await notifier.completarRegistro();
+                }
+              },
+            ),
+          ],
           const SizedBox(height: 9),
           SizedBox(
             width: double.infinity,
@@ -678,6 +907,7 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
     required List<String> values,
     required IngresoTelarNotifier notifier,
     required bool enabled,
+    bool readOnly = false,
   }) {
     return _field(
       keyName: keyName,
@@ -686,9 +916,10 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
       icon: icon,
       notifier: notifier,
       enabled: enabled,
+      readOnly: readOnly,
       suffixIcon: IconButton(
         onPressed:
-            enabled
+            enabled && !readOnly
                 ? () => _showPicker(
                   title: label,
                   values: values,
@@ -709,6 +940,7 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
     required IconData icon,
     required IngresoTelarNotifier notifier,
     required bool enabled,
+    bool readOnly = false,
     TextInputType? keyboardType,
     VoidCallback? onEditingComplete,
     Widget? suffixIcon,
@@ -716,8 +948,10 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
     return TextFormField(
       controller: _controllers[keyName],
       enabled: enabled,
-      onChanged: (value) => notifier.actualizarCampo(keyName, value),
-      onEditingComplete: onEditingComplete,
+      readOnly: readOnly,
+      onChanged:
+          readOnly ? null : (value) => notifier.actualizarCampo(keyName, value),
+      onEditingComplete: readOnly ? null : onEditingComplete,
       keyboardType: keyboardType,
       style: const TextStyle(
         color: CorporateTokens.navy900,
@@ -949,6 +1183,148 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
     if (year == null || month == null || day == null) return null;
     if (month < 1 || month > 12 || day < 1 || day > 31) return null;
     return DateTime(year, month, day);
+  }
+
+  Widget _disabledContextButton(String label) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: CorporateTokens.surfaceTop,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: CorporateTokens.borderSoft),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.lock_clock_rounded,
+            color: CorporateTokens.slate500,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: CorporateTokens.slate700,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _autofillOperationalDefaults(
+    IngresoTelarState state,
+    IngresoTelarNotifier notifier,
+  ) {
+    final hasTelar = _fieldValue(state, 'telar').isNotEmpty;
+    if (!hasTelar) return;
+
+    if (_fieldValue(state, 'fecha_inicio').isEmpty) {
+      notifier.seleccionarFechaInicio(DateTime.now());
+    }
+  }
+
+  bool _isProgressLoaded(IngresoTelarState state) {
+    return state.estadoActual.toUpperCase() == 'EN PROGRESO' ||
+        _fieldValue(state, 'parcial').isNotEmpty;
+  }
+
+  bool _isProgressReady(IngresoTelarState state) {
+    return _fieldValue(state, 'telar').isNotEmpty &&
+        _fieldValue(state, 'articulo').isNotEmpty &&
+        _fieldValue(state, 'trama').isNotEmpty;
+  }
+
+  bool _isCompletionReady(IngresoTelarState state) {
+    return _isProgressReady(state) &&
+        _fieldValue(state, 'fecha_final').isNotEmpty;
+  }
+
+  String _fieldValue(IngresoTelarState state, String key) {
+    return (state.fields[key] ?? '').trim();
+  }
+
+  Future<bool> _confirmarRegistroTelar({
+    required IngresoTelarState state,
+    required String usuario,
+    required String accion,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => AlertDialog(
+            title: Text('Confirmar $accion'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Revise el resumen antes de enviar al backend.',
+                  style: TextStyle(color: CorporateTokens.slate700),
+                ),
+                const SizedBox(height: 12),
+                _confirmRow('Telar', _fieldValue(state, 'telar')),
+                _confirmRow('Articulo', _fieldValue(state, 'articulo')),
+                _confirmRow('Trama', _fieldValue(state, 'trama')),
+                _confirmRow('Fecha inicio', _fieldValue(state, 'fecha_inicio')),
+                _confirmRow('Fecha final', _fieldValue(state, 'fecha_final')),
+                _confirmRow('Operario', usuario),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(context, true),
+                icon: const Icon(Icons.check_circle_rounded),
+                label: const Text('Confirmar'),
+              ),
+            ],
+          ),
+    );
+    return confirmed == true;
+  }
+
+  Widget _confirmRow(String label, String value) {
+    final safe = value.trim().isEmpty ? '-' : value.trim();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 7),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: CorporateTokens.slate500,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Flexible(
+            child: Text(
+              safe,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: CorporateTokens.navy900,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _syncControllers(Map<String, String> fields) {

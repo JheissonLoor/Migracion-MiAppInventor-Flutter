@@ -55,11 +55,14 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
     final state = ref.watch(urdidoProvider);
     final notifier = ref.read(urdidoProvider.notifier);
     final usuario = ref.watch(authProvider).user?.usuario ?? 'OPERARIO';
+    final hasCodigo = _field(state, 'codigo_pcp').isNotEmpty;
+    final hasPrecarga = _field(state, 'codigo_urdido').isNotEmpty;
 
     ref.listen<UrdidoState>(urdidoProvider, (previous, next) {
       if (!mounted) return;
       if (previous?.fields != next.fields) {
         _syncControllers(next.fields);
+        _autofillDefaults(next, notifier, usuario);
       }
     });
 
@@ -89,18 +92,37 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
                               const SizedBox(height: 10),
                               _buildScanCard(state, notifier),
                               const SizedBox(height: 10),
-                              _buildMainFormCard(state, notifier, usuario),
-                              const SizedBox(height: 10),
+                              if (hasPrecarga) ...[
+                                _buildSmartAlerts(state),
+                                const SizedBox(height: 10),
+                                _buildMainFormCard(state, notifier, usuario),
+                                const SizedBox(height: 10),
+                              ] else ...[
+                                _buildLockedHint(
+                                  hasCodigo
+                                      ? 'Presione "Precargar datos" para habilitar el formulario de urdido.'
+                                      : 'Escanee o ingrese el codigo PCP para iniciar el registro.',
+                                ),
+                                const SizedBox(height: 10),
+                              ],
                               _buildQueueCard(state, notifier),
                               const SizedBox(height: 12),
-                              _buildActionButtons(
-                                state: state,
-                                usuario: usuario,
-                                onEnviar:
-                                    () =>
-                                        notifier.enviarUrdido(usuario: usuario),
-                                onLimpiar: () => _limpiar(notifier),
-                              ),
+                              if (hasPrecarga)
+                                _buildActionButtons(
+                                  state: state,
+                                  usuario: usuario,
+                                  onEnviar: () async {
+                                    final confirmed = await _confirmarRegistro(
+                                      state: state,
+                                      usuario: usuario,
+                                    );
+                                    if (!confirmed) return;
+                                    await notifier.enviarUrdido(
+                                      usuario: usuario,
+                                    );
+                                  },
+                                  onLimpiar: () => _limpiar(notifier),
+                                ),
                             ],
                           ),
                         ),
@@ -141,6 +163,124 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
     return ProductionStatusBanner(
       message: state.message,
       errorMessage: state.errorMessage,
+    );
+  }
+
+  Widget _buildLockedHint(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: CorporateTokens.borderSoft),
+        boxShadow: CorporateTokens.cardShadow,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7ED),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.lock_clock_rounded,
+              color: Color(0xFFD48F54),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: CorporateTokens.navy900,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSmartAlerts(UrdidoState state) {
+    final alerts = <String>[];
+    final error = (state.errorMessage ?? '').trim();
+    if (error.isNotEmpty) alerts.add(error);
+    if (_field(state, 'fecha_urdido').isEmpty) {
+      alerts.add(
+        'Fecha de urdido pendiente; se completa automaticamente al precargar.',
+      );
+    }
+    if (_field(state, 'hora_inicio').isEmpty) {
+      alerts.add(
+        'Hora inicio pendiente; se completa automaticamente al precargar.',
+      );
+    }
+    if (_field(state, 'codigo_urdido').isNotEmpty) {
+      alerts.add(
+        'Identificadores de urdido bloqueados por precarga para evitar errores.',
+      );
+    }
+    if (_isUrdidoReady(state)) {
+      alerts.add('Datos completos. Revise el resumen y envie el registro.');
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: CorporateTokens.borderSoft),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Alertas operativas',
+            style: TextStyle(
+              color: CorporateTokens.navy900,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...alerts.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Icon(
+                    item == error && error.isNotEmpty
+                        ? Icons.error_outline_rounded
+                        : Icons.info_outline_rounded,
+                    size: 17,
+                    color:
+                        item == error && error.isNotEmpty
+                            ? const Color(0xFFDC2626)
+                            : const Color(0xFFD48F54),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: const TextStyle(
+                        color: CorporateTokens.navy900,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -287,6 +427,7 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
     UrdidoNotifier notifier,
     String usuario,
   ) {
+    final lockedByPrecarga = _field(state, 'codigo_urdido').isNotEmpty;
     return _buildCard(
       title: 'Formulario de Urdido',
       children: [
@@ -319,6 +460,7 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
           hint: 'Autocompletado por escaneo',
           icon: Icons.confirmation_number_rounded,
           notifier: notifier,
+          readOnly: lockedByPrecarga,
           validator: (value) => _required(value, 'codigo urdido'),
         ),
         const SizedBox(height: 8),
@@ -328,6 +470,7 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
           hint: 'Ejemplo: OP-4552',
           icon: Icons.assignment_rounded,
           notifier: notifier,
+          readOnly: lockedByPrecarga,
           validator: (value) => _required(value, 'orden de pedido'),
         ),
         const SizedBox(height: 8),
@@ -337,6 +480,7 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
           options: state.articulos,
           notifier: notifier,
           allowManual: true,
+          enabled: !lockedByPrecarga,
         ),
         const SizedBox(height: 8),
         _buildDropdownField(
@@ -345,6 +489,7 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
           options: state.titulos,
           notifier: notifier,
           allowManual: true,
+          enabled: !lockedByPrecarga,
         ),
         const SizedBox(height: 8),
         _buildDropdownField(
@@ -353,6 +498,7 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
           options: state.materiales,
           notifier: notifier,
           allowManual: true,
+          enabled: !lockedByPrecarga,
         ),
         const SizedBox(height: 8),
         _buildTextField(
@@ -634,50 +780,53 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
     required Future<void> Function() onEnviar,
     required VoidCallback onLimpiar,
   }) {
+    final ready = _isUrdidoReady(state);
     return Column(
       children: [
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: CorporateTokens.primaryButtonGradient,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ElevatedButton.icon(
-            onPressed:
-                state.isBusy
-                    ? null
-                    : () async {
-                      if (_formKey.currentState?.validate() != true) {
-                        return;
-                      }
-                      await onEnviar();
-                    },
-            icon:
-                state.status == UrdidoStatus.sending
-                    ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                    : const Icon(Icons.send_rounded),
-            label: Text(
-              state.status == UrdidoStatus.sending
-                  ? 'Enviando urdido...'
-                  : 'Registrar Urdido',
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 48),
-              disabledBackgroundColor: Colors.transparent,
-            ),
-          ),
-        ),
+        ready
+            ? DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: CorporateTokens.primaryButtonGradient,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ElevatedButton.icon(
+                onPressed:
+                    state.isBusy
+                        ? null
+                        : () async {
+                          if (_formKey.currentState?.validate() != true) {
+                            return;
+                          }
+                          await onEnviar();
+                        },
+                icon:
+                    state.status == UrdidoStatus.sending
+                        ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                        : const Icon(Icons.verified_user_rounded),
+                label: Text(
+                  state.status == UrdidoStatus.sending
+                      ? 'Enviando urdido...'
+                      : 'Revisar y registrar urdido',
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 48),
+                  disabledBackgroundColor: Colors.transparent,
+                ),
+              ),
+            )
+            : _disabledContextButton('Complete campos obligatorios de urdido'),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -717,6 +866,33 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
     return Icons.view_agenda_rounded;
   }
 
+  Widget _disabledContextButton(String label) {
+    return Container(
+      width: double.infinity,
+      height: 48,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: CorporateTokens.borderSoft),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.edit_note_rounded, color: CorporateTokens.slate500),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              color: CorporateTokens.slate500,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTextField({
     required String keyName,
     required String label,
@@ -727,12 +903,15 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
     Widget? suffixIcon,
     int minLines = 1,
     int maxLines = 1,
+    bool readOnly = false,
   }) {
     return TextFormField(
       controller: _controllers[keyName],
       minLines: minLines,
       maxLines: maxLines,
-      onChanged: (value) => notifier.actualizarCampo(keyName, value),
+      readOnly: readOnly,
+      onChanged:
+          readOnly ? null : (value) => notifier.actualizarCampo(keyName, value),
       validator: validator,
       style: const TextStyle(color: CorporateTokens.navy900),
       decoration: _inputDecoration(
@@ -750,6 +929,7 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
     required List<String> options,
     required UrdidoNotifier notifier,
     bool allowManual = false,
+    bool enabled = true,
   }) {
     final selected = _controllers[keyName]!.text.trim();
     final cleaned =
@@ -769,16 +949,20 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
         hint: 'Ingrese $label',
         icon: Icons.edit_note_rounded,
         notifier: notifier,
+        readOnly: !enabled,
       );
     }
 
     return DropdownButtonFormField<String>(
       value: selected.isEmpty ? null : selected,
-      onChanged: (value) {
-        final newValue = value ?? '';
-        _controllers[keyName]!.text = newValue;
-        notifier.actualizarCampo(keyName, newValue);
-      },
+      onChanged:
+          enabled
+              ? (value) {
+                final newValue = value ?? '';
+                _controllers[keyName]!.text = newValue;
+                notifier.actualizarCampo(keyName, newValue);
+              }
+              : null,
       items:
           cleaned
               .map(
@@ -812,6 +996,39 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
       if (controller.text != value) {
         controller.text = value;
       }
+    }
+  }
+
+  void _autofillDefaults(
+    UrdidoState state,
+    UrdidoNotifier notifier,
+    String usuario,
+  ) {
+    if (_field(state, 'codigo_urdido').isEmpty) return;
+    if (_field(state, 'operario').isEmpty && usuario.trim().isNotEmpty) {
+      _controllers['operario']!.text = usuario.trim();
+      notifier.actualizarCampo('operario', usuario.trim());
+    }
+    if (_field(state, 'turno').isEmpty) {
+      const value = 'Manana';
+      _controllers['turno']!.text = value;
+      notifier.actualizarCampo('turno', value);
+    }
+    if (_field(state, 'tipo_proceso').isEmpty) {
+      const value = 'Produccion';
+      _controllers['tipo_proceso']!.text = value;
+      notifier.actualizarCampo('tipo_proceso', value);
+    }
+    final now = DateTime.now();
+    if (_field(state, 'fecha_urdido').isEmpty) {
+      final value = _formatLocalDate(now);
+      _controllers['fecha_urdido']!.text = value;
+      notifier.actualizarCampo('fecha_urdido', value);
+    }
+    if (_field(state, 'hora_inicio').isEmpty) {
+      final value = _formatLocalTime(now);
+      _controllers['hora_inicio']!.text = value;
+      notifier.actualizarCampo('hora_inicio', value);
     }
   }
 
@@ -885,6 +1102,123 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
 
   String _field(UrdidoState state, String key) {
     return (state.fields[key] ?? _controllers[key]?.text ?? '').trim();
+  }
+
+  bool _isUrdidoReady(UrdidoState state) {
+    final required = [
+      'codigo_pcp',
+      'codigo_urdido',
+      'turno',
+      'operario',
+      'orden_pedido',
+      'articulo',
+      'tipo_proceso',
+      'fecha_urdido',
+      'cantidad_hilos',
+      'hora_inicio',
+      'hora_final',
+      'ancho_plegador',
+      'metros_urdido',
+      'peso_hilos_urdido',
+      'num_plegador',
+      'titulo',
+      'material',
+    ];
+    return required.every((key) => _field(state, key).isNotEmpty);
+  }
+
+  Future<bool> _confirmarRegistro({
+    required UrdidoState state,
+    required String usuario,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (dialogContext) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            title: const Text('Confirmar urdido'),
+            content: SizedBox(
+              width: 520,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _confirmRow('PCP', _field(state, 'codigo_pcp')),
+                  _confirmRow('Codigo urdido', _field(state, 'codigo_urdido')),
+                  _confirmRow('Articulo', _field(state, 'articulo')),
+                  _confirmRow('Metros', _field(state, 'metros_urdido')),
+                  _confirmRow('Plegador', _field(state, 'num_plegador')),
+                  _confirmRow('Usuario', usuario),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Revisar'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                icon: const Icon(Icons.send_rounded),
+                label: const Text('Confirmar registro'),
+              ),
+            ],
+          ),
+    );
+    return confirmed == true;
+  }
+
+  Widget _confirmRow(String label, String value) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: CorporateTokens.borderSoft),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: CorporateTokens.slate500,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value.trim().isEmpty ? '-' : value.trim(),
+              style: const TextStyle(
+                color: CorporateTokens.navy900,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatLocalDate(DateTime date) {
+    final dd = date.day.toString().padLeft(2, '0');
+    final mm = date.month.toString().padLeft(2, '0');
+    final yy = date.year.toString();
+    return '$dd/$mm/$yy';
+  }
+
+  String _formatLocalTime(DateTime date) {
+    final hh = date.hour.toString().padLeft(2, '0');
+    final mm = date.minute.toString().padLeft(2, '0');
+    return '$hh:$mm';
   }
 
   String _formatDate(String iso) {

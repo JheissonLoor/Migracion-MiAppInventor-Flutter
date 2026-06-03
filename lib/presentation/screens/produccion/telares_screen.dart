@@ -56,11 +56,16 @@ class _TelaresScreenState extends ConsumerState<TelaresScreen>
     final state = ref.watch(telaresProvider);
     final notifier = ref.read(telaresProvider.notifier);
     final usuario = ref.watch(authProvider).user?.usuario ?? 'OPERARIO';
+    final hasCodigo = _field(state, 'codigo_pcp').isNotEmpty;
+    final hasPrecarga =
+        _field(state, 'codigo_urdido').isNotEmpty ||
+        _field(state, 'articulo_urdido').isNotEmpty;
 
     ref.listen<TelaresState>(telaresProvider, (previous, next) {
       if (!mounted) return;
       if (previous?.fields != next.fields) {
         _syncControllers(next.fields);
+        _autofillDefaults(next, notifier);
       }
     });
 
@@ -90,21 +95,39 @@ class _TelaresScreenState extends ConsumerState<TelaresScreen>
                               const SizedBox(height: 10),
                               _buildScanCard(state, notifier),
                               const SizedBox(height: 10),
-                              _buildResumenCard(),
-                              const SizedBox(height: 10),
-                              _buildRegistroCard(state, notifier),
-                              const SizedBox(height: 10),
+                              if (hasPrecarga) ...[
+                                _buildSmartAlerts(state),
+                                const SizedBox(height: 10),
+                                _buildResumenCard(),
+                                const SizedBox(height: 10),
+                                _buildRegistroCard(state, notifier),
+                                const SizedBox(height: 10),
+                              ] else ...[
+                                _buildLockedHint(
+                                  hasCodigo
+                                      ? 'Presione "Buscar datos" para habilitar el registro de calidad.'
+                                      : 'Escanee o ingrese codigo PCP para iniciar.',
+                                ),
+                                const SizedBox(height: 10),
+                              ],
                               _buildQueueCard(state, notifier),
                               const SizedBox(height: 12),
-                              _buildActionButtons(
-                                state: state,
-                                usuario: usuario,
-                                onEnviar:
-                                    () => notifier.enviarRegistro(
+                              if (hasPrecarga)
+                                _buildActionButtons(
+                                  state: state,
+                                  usuario: usuario,
+                                  onEnviar: () async {
+                                    final confirmed = await _confirmarRegistro(
+                                      state: state,
                                       usuario: usuario,
-                                    ),
-                                onLimpiar: () => _limpiar(notifier),
-                              ),
+                                    );
+                                    if (!confirmed) return;
+                                    await notifier.enviarRegistro(
+                                      usuario: usuario,
+                                    );
+                                  },
+                                  onLimpiar: () => _limpiar(notifier),
+                                ),
                             ],
                           ),
                         ),
@@ -145,6 +168,121 @@ class _TelaresScreenState extends ConsumerState<TelaresScreen>
     return ProductionStatusBanner(
       message: state.message,
       errorMessage: state.errorMessage,
+    );
+  }
+
+  Widget _buildLockedHint(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: CorporateTokens.borderSoft),
+        boxShadow: CorporateTokens.cardShadow,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7ED),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.rule_folder_rounded,
+              color: Color(0xFF9A7A57),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: CorporateTokens.navy900,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSmartAlerts(TelaresState state) {
+    final alerts = <String>[];
+    final error = (state.errorMessage ?? '').trim();
+    if (error.isNotEmpty) alerts.add(error);
+    if (_field(state, 'reloj').isEmpty) {
+      alerts.add('Reloj sugerido automaticamente: A. Cambielo si corresponde.');
+    }
+    if (state.isNuevoCorte) {
+      alerts.add(
+        'Modo detectado: nuevo corte. Complete puntaje y telar nuevo.',
+      );
+    } else if (state.registroMode == TelaresRegistroMode.primerCorteAprobado) {
+      alerts.add('Modo: primer corte aprobado. Confirme fecha y aprobador.');
+    } else {
+      alerts.add('Modo: primer corte no aprobado. Complete observaciones.');
+    }
+    if (_isRegistroReady(state)) {
+      alerts.add('Datos completos. Revise el resumen antes de registrar.');
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: CorporateTokens.borderSoft),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Alertas operativas',
+            style: TextStyle(
+              color: CorporateTokens.navy900,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...alerts.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Icon(
+                    item == error && error.isNotEmpty
+                        ? Icons.error_outline_rounded
+                        : Icons.info_outline_rounded,
+                    size: 17,
+                    color:
+                        item == error && error.isNotEmpty
+                            ? const Color(0xFFDC2626)
+                            : const Color(0xFF9A7A57),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: const TextStyle(
+                        color: CorporateTokens.navy900,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -665,50 +803,53 @@ class _TelaresScreenState extends ConsumerState<TelaresScreen>
     required Future<void> Function() onEnviar,
     required VoidCallback onLimpiar,
   }) {
+    final ready = _isRegistroReady(state);
     return Column(
       children: [
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: CorporateTokens.primaryButtonGradient,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ElevatedButton.icon(
-            onPressed:
-                state.isBusy
-                    ? null
-                    : () async {
-                      if (_formKey.currentState?.validate() != true) {
-                        return;
-                      }
-                      await onEnviar();
-                    },
-            icon:
-                state.status == TelaresStatus.sending
-                    ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                    : const Icon(Icons.send_rounded),
-            label: Text(
-              state.status == TelaresStatus.sending
-                  ? 'Enviando registro...'
-                  : 'Registrar en telares',
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 48),
-              disabledBackgroundColor: Colors.transparent,
-            ),
-          ),
-        ),
+        ready
+            ? DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: CorporateTokens.primaryButtonGradient,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ElevatedButton.icon(
+                onPressed:
+                    state.isBusy
+                        ? null
+                        : () async {
+                          if (_formKey.currentState?.validate() != true) {
+                            return;
+                          }
+                          await onEnviar();
+                        },
+                icon:
+                    state.status == TelaresStatus.sending
+                        ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                        : const Icon(Icons.verified_user_rounded),
+                label: Text(
+                  state.status == TelaresStatus.sending
+                      ? 'Enviando registro...'
+                      : 'Revisar y registrar en telares',
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 48),
+                  disabledBackgroundColor: Colors.transparent,
+                ),
+              ),
+            )
+            : _disabledContextButton('Complete calidad y telar'),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -747,6 +888,33 @@ class _TelaresScreenState extends ConsumerState<TelaresScreen>
     if (value.contains('registro')) return Icons.fact_check_rounded;
     if (value.contains('cola')) return Icons.sync_alt_rounded;
     return Icons.view_agenda_rounded;
+  }
+
+  Widget _disabledContextButton(String label) {
+    return Container(
+      width: double.infinity,
+      height: 48,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: CorporateTokens.borderSoft),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.edit_note_rounded, color: CorporateTokens.slate500),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              color: CorporateTokens.slate500,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildTextField({
@@ -848,6 +1016,31 @@ class _TelaresScreenState extends ConsumerState<TelaresScreen>
     }
   }
 
+  void _autofillDefaults(TelaresState state, TelaresNotifier notifier) {
+    final loaded =
+        _field(state, 'codigo_urdido').isNotEmpty ||
+        _field(state, 'articulo_urdido').isNotEmpty;
+    if (!loaded) return;
+
+    if (_field(state, 'reloj').isEmpty) {
+      const value = 'A';
+      _controllers['reloj']!.text = value;
+      notifier.actualizarCampo('reloj', value);
+    }
+
+    final today = _formatLocalDate(DateTime.now());
+    if (state.registroMode == TelaresRegistroMode.primerCorteAprobado &&
+        _field(state, 'fecha_aprobado').isEmpty) {
+      _controllers['fecha_aprobado']!.text = today;
+      notifier.actualizarCampo('fecha_aprobado', today);
+    }
+    if (state.registroMode == TelaresRegistroMode.primerCorteNoAprobado &&
+        _field(state, 'fecha_no_aprob').isEmpty) {
+      _controllers['fecha_no_aprob']!.text = today;
+      notifier.actualizarCampo('fecha_no_aprob', today);
+    }
+  }
+
   void _limpiar(TelaresNotifier notifier) {
     notifier.limpiarFormulario();
     for (final key in _fieldKeys) {
@@ -942,6 +1135,104 @@ class _TelaresScreenState extends ConsumerState<TelaresScreen>
 
     return _field(state, 'fecha_no_aprob').isNotEmpty &&
         _field(state, 'observaciones').isNotEmpty;
+  }
+
+  Future<bool> _confirmarRegistro({
+    required TelaresState state,
+    required String usuario,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (dialogContext) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            title: const Text('Confirmar registro de telar'),
+            content: SizedBox(
+              width: 520,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _confirmRow('PCP', _field(state, 'codigo_pcp')),
+                  _confirmRow('Codigo urdido', _field(state, 'codigo_urdido')),
+                  _confirmRow('Modo', _modeLabel(state.registroMode)),
+                  _confirmRow(
+                    'Telar',
+                    state.isNuevoCorte
+                        ? _field(state, 'telar_nuevo')
+                        : _field(state, 'telar'),
+                  ),
+                  _confirmRow(
+                    'Puntaje',
+                    state.isNuevoCorte
+                        ? _field(state, 'puntaje_nuevo')
+                        : _field(state, 'puntaje1'),
+                  ),
+                  _confirmRow('Usuario', usuario),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Revisar'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                icon: const Icon(Icons.send_rounded),
+                label: const Text('Confirmar registro'),
+              ),
+            ],
+          ),
+    );
+    return confirmed == true;
+  }
+
+  Widget _confirmRow(String label, String value) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: CorporateTokens.borderSoft),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: CorporateTokens.slate500,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value.trim().isEmpty ? '-' : value.trim(),
+              style: const TextStyle(
+                color: CorporateTokens.navy900,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatLocalDate(DateTime date) {
+    final dd = date.day.toString().padLeft(2, '0');
+    final mm = date.month.toString().padLeft(2, '0');
+    final yy = date.year.toString();
+    return '$dd/$mm/$yy';
   }
 
   String _modeLabel(TelaresRegistroMode mode) {

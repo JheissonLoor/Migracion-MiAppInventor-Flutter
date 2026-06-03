@@ -84,6 +84,10 @@ class _CorteRolloScreenState extends ConsumerState<CorteRolloScreen>
                         _statusBanner(state),
                       ],
                       const SizedBox(height: 10),
+                      _buildFlowGuide(state),
+                      const SizedBox(height: 10),
+                      _buildSmartAlerts(state),
+                      const SizedBox(height: 10),
                       Expanded(
                         child: SingleChildScrollView(
                           physics: const BouncingScrollPhysics(),
@@ -149,11 +153,196 @@ class _CorteRolloScreenState extends ConsumerState<CorteRolloScreen>
     );
   }
 
+  Widget _buildFlowGuide(CorteRolloState state) {
+    final hasMadre = _fieldValue(state, 'codigo_madre').isNotEmpty;
+    final hasMetros = _fieldValue(state, 'metros').isNotEmpty;
+    final hasCorte = state.corteResult != null;
+    final hasConsulta = _fieldValue(state, 'consulta_codigo').isNotEmpty;
+    final hasTrace = state.trazabilidad != null;
+    final hasError = (state.errorMessage ?? '').trim().isNotEmpty;
+    final readyToCut = _isCorteReady(state);
+
+    final signal =
+        hasError
+            ? OperationSignalLevel.error
+            : hasCorte || hasTrace
+            ? OperationSignalLevel.ready
+            : readyToCut || hasConsulta
+            ? OperationSignalLevel.warning
+            : OperationSignalLevel.neutral;
+
+    final helper =
+        hasError
+            ? state.errorMessage!.trim()
+            : hasCorte
+            ? 'Corte generado. Puede consultar trazabilidad del sub-rollo.'
+            : readyToCut
+            ? 'Listo para revisar y registrar el corte.'
+            : hasConsulta
+            ? 'Codigo listo para consultar trazabilidad.'
+            : 'Ingrese codigo madre y metros antes de cortar.';
+
+    return OperationFlowGuide(
+      title: 'Guia operativa de corte de rollo',
+      statusLabel:
+          hasError
+              ? 'REVISAR'
+              : hasCorte || hasTrace
+              ? 'LISTO'
+              : readyToCut || hasConsulta
+              ? 'EN PROCESO'
+              : 'PENDIENTE',
+      helperText: helper,
+      signal: signal,
+      accentColor: const Color(0xFF2F7C92),
+      steps: [
+        OperationStepData(
+          label: 'Identificar madre',
+          icon: Icons.qr_code_rounded,
+          done: hasMadre,
+          active: !hasMadre,
+        ),
+        OperationStepData(
+          label: 'Definir metros',
+          icon: Icons.straighten_rounded,
+          done: hasMetros,
+          active: hasMadre && !hasMetros,
+        ),
+        OperationStepData(
+          label: 'Registrar corte',
+          icon: Icons.content_cut_rounded,
+          done: hasCorte,
+          active: readyToCut && !hasCorte,
+        ),
+        OperationStepData(
+          label: 'Consultar trazabilidad',
+          icon: Icons.account_tree_rounded,
+          done: hasTrace,
+          active: hasCorte && !hasTrace,
+        ),
+      ],
+      summary: [
+        OperationSummaryItem(
+          label: 'Madre',
+          value: _fieldValue(state, 'codigo_madre'),
+          icon: Icons.inventory_2_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Metros',
+          value: _fieldValue(state, 'metros'),
+          icon: Icons.square_foot_rounded,
+        ),
+        OperationSummaryItem(
+          label: 'Sub-rollo',
+          value: state.corteResult?.codigoHijo ?? '',
+          icon: Icons.call_split_rounded,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSmartAlerts(CorteRolloState state) {
+    final readyToCut = _isCorteReady(state);
+    final hasCorte = state.corteResult != null;
+    final alerts = <String>[];
+
+    if (_fieldValue(state, 'codigo_madre').isEmpty) {
+      alerts.add('Escanee o ingrese el codigo madre para iniciar el flujo.');
+    }
+    if (_fieldValue(state, 'metros').isEmpty) {
+      alerts.add(
+        'Los metros a cortar son obligatorios para evitar cortes sin control.',
+      );
+    }
+    if (hasCorte) {
+      alerts.add(
+        'Corte registrado: codigo madre, metros y destino quedan protegidos hasta limpiar pantalla.',
+      );
+    }
+    if (readyToCut && !hasCorte) {
+      alerts.add('Semaforo amarillo: revise el resumen antes de registrar.');
+    }
+    if (state.trazabilidad != null) {
+      alerts.add(
+        'Trazabilidad consultada: valide restante, consumido e hijos.',
+      );
+    }
+
+    final color =
+        (state.errorMessage ?? '').trim().isNotEmpty
+            ? const Color(0xFFDC2626)
+            : hasCorte || state.trazabilidad != null
+            ? const Color(0xFF16A34A)
+            : readyToCut
+            ? const Color(0xFFD97706)
+            : CorporateTokens.cobalt600;
+
+    return AnimatedContainer(
+      duration: CorporateTokens.motionFast,
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(Icons.traffic_rounded, color: color, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  hasCorte
+                      ? 'Corte registrado'
+                      : readyToCut
+                      ? 'Listo para cortar'
+                      : 'Validacion de corte',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          for (final alert in alerts)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 5),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.bolt_rounded, color: color, size: 16),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      alert,
+                      style: const TextStyle(
+                        color: CorporateTokens.navy900,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        height: 1.25,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _corteCard(
     CorteRolloState state,
     CorteRolloNotifier notifier,
     String usuario,
   ) {
+    final lockedByResult = state.corteResult != null;
+    final readyToCut = _isCorteReady(state);
     return _section(
       step: '01',
       title: 'Registrar corte',
@@ -168,6 +357,7 @@ class _CorteRolloScreenState extends ConsumerState<CorteRolloScreen>
             icon: Icons.qr_code_rounded,
             notifier: notifier,
             enabled: !state.isBusy,
+            readOnly: lockedByResult,
           ),
           const SizedBox(height: 10),
           LayoutBuilder(
@@ -183,6 +373,7 @@ class _CorteRolloScreenState extends ConsumerState<CorteRolloScreen>
                   ),
                   notifier: notifier,
                   enabled: !state.isBusy,
+                  readOnly: lockedByResult,
                 ),
                 _field(
                   keyName: 'destino',
@@ -191,22 +382,34 @@ class _CorteRolloScreenState extends ConsumerState<CorteRolloScreen>
                   icon: Icons.place_rounded,
                   notifier: notifier,
                   enabled: !state.isBusy,
+                  readOnly: lockedByResult,
                 ),
               ]);
             },
           ),
           const SizedBox(height: 12),
-          _ActionButton(
-            label:
-                state.status == CorteRolloStatus.cutting
-                    ? 'Registrando corte...'
-                    : 'Cortar / registrar',
-            icon: Icons.content_cut_rounded,
-            busy: state.status == CorteRolloStatus.cutting,
-            enabled: !state.isBusy,
-            colors: CorporateTokens.primaryButtonGradient,
-            onPressed: () => notifier.cortar(usuario: usuario),
-          ),
+          if (!readyToCut)
+            _disabledContextButton('Complete codigo madre y metros a cortar')
+          else
+            _ActionButton(
+              label:
+                  state.status == CorteRolloStatus.cutting
+                      ? 'Registrando corte...'
+                      : 'Revisar y registrar corte',
+              icon: Icons.content_cut_rounded,
+              busy: state.status == CorteRolloStatus.cutting,
+              enabled: !state.isBusy && !lockedByResult,
+              colors: CorporateTokens.primaryButtonGradient,
+              onPressed: () async {
+                final confirmed = await _confirmarCorte(
+                  state: state,
+                  usuario: usuario,
+                );
+                if (confirmed) {
+                  await notifier.cortar(usuario: usuario);
+                }
+              },
+            ),
         ],
       ),
     );
@@ -228,6 +431,7 @@ class _CorteRolloScreenState extends ConsumerState<CorteRolloScreen>
   }
 
   Widget _trazabilidadCard(CorteRolloState state, CorteRolloNotifier notifier) {
+    final hasConsulta = _fieldValue(state, 'consulta_codigo').isNotEmpty;
     return _section(
       step: '02',
       title: 'Consultar trazabilidad',
@@ -244,17 +448,20 @@ class _CorteRolloScreenState extends ConsumerState<CorteRolloScreen>
             enabled: !state.isBusy,
           ),
           const SizedBox(height: 12),
-          _ActionButton(
-            label:
-                state.status == CorteRolloStatus.querying
-                    ? 'Consultando trazabilidad...'
-                    : 'Consultar trazabilidad',
-            icon: Icons.search_rounded,
-            busy: state.status == CorteRolloStatus.querying,
-            enabled: !state.isBusy,
-            colors: const [Color(0xFF0F766E), Color(0xFF14B8A6)],
-            onPressed: notifier.consultar,
-          ),
+          if (!hasConsulta)
+            _disabledContextButton('Ingrese codigo para consultar trazabilidad')
+          else
+            _ActionButton(
+              label:
+                  state.status == CorteRolloStatus.querying
+                      ? 'Consultando trazabilidad...'
+                      : 'Consultar trazabilidad',
+              icon: Icons.search_rounded,
+              busy: state.status == CorteRolloStatus.querying,
+              enabled: !state.isBusy,
+              colors: const [Color(0xFF0F766E), Color(0xFF14B8A6)],
+              onPressed: notifier.consultar,
+            ),
         ],
       ),
     );
@@ -426,12 +633,15 @@ class _CorteRolloScreenState extends ConsumerState<CorteRolloScreen>
     required IconData icon,
     required CorteRolloNotifier notifier,
     required bool enabled,
+    bool readOnly = false,
     TextInputType? keyboardType,
   }) {
     return TextFormField(
       controller: _controllers[keyName],
       enabled: enabled,
-      onChanged: (value) => notifier.actualizarCampo(keyName, value),
+      readOnly: readOnly,
+      onChanged:
+          readOnly ? null : (value) => notifier.actualizarCampo(keyName, value),
       keyboardType: keyboardType,
       style: const TextStyle(
         color: CorporateTokens.navy900,
@@ -474,6 +684,122 @@ class _CorteRolloScreenState extends ConsumerState<CorteRolloScreen>
               color: CorporateTokens.navy900,
               fontSize: 13,
               fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _disabledContextButton(String label) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: CorporateTokens.surfaceTop,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: CorporateTokens.borderSoft),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.lock_clock_rounded,
+            color: CorporateTokens.slate500,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: CorporateTokens.slate700,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _isCorteReady(CorteRolloState state) {
+    return _fieldValue(state, 'codigo_madre').isNotEmpty &&
+        _fieldValue(state, 'metros').isNotEmpty;
+  }
+
+  String _fieldValue(CorteRolloState state, String key) {
+    return (state.fields[key] ?? '').trim();
+  }
+
+  Future<bool> _confirmarCorte({
+    required CorteRolloState state,
+    required String usuario,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Confirmar corte de rollo'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Revise los datos antes de registrar el corte.',
+                  style: TextStyle(color: CorporateTokens.slate700),
+                ),
+                const SizedBox(height: 12),
+                _confirmRow('Codigo madre', _fieldValue(state, 'codigo_madre')),
+                _confirmRow('Metros', _fieldValue(state, 'metros')),
+                _confirmRow('Destino', _fieldValue(state, 'destino')),
+                _confirmRow('Usuario', usuario),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(context, true),
+                icon: const Icon(Icons.check_circle_rounded),
+                label: const Text('Confirmar'),
+              ),
+            ],
+          ),
+    );
+    return confirmed == true;
+  }
+
+  Widget _confirmRow(String label, String value) {
+    final safe = value.trim().isEmpty ? '-' : value.trim();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 7),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: CorporateTokens.slate500,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Flexible(
+            child: Text(
+              safe,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: CorporateTokens.navy900,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ],

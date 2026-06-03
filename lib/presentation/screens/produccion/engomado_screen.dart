@@ -57,11 +57,16 @@ class _EngomadoScreenState extends ConsumerState<EngomadoScreen>
     final notifier = ref.read(engomadoProvider.notifier);
     final usuario = ref.watch(authProvider).user?.usuario ?? 'OPERARIO';
     final proceso = _controllers['tipo_proceso']!.text.trim();
+    final hasCodigo = _field(state, 'codigopcp').isNotEmpty;
+    final hasLink =
+        state.urdidoSnapshot.isNotEmpty ||
+        _field(state, 'codigo_urdido').isNotEmpty;
 
     ref.listen<EngomadoState>(engomadoProvider, (previous, next) {
       if (!mounted) return;
       if (previous?.fields != next.fields) {
         _syncControllers(next.fields);
+        _autofillDefaults(next, notifier, usuario);
       }
     });
 
@@ -91,26 +96,51 @@ class _EngomadoScreenState extends ConsumerState<EngomadoScreen>
                               const SizedBox(height: 10),
                               _buildScanCard(state, notifier),
                               const SizedBox(height: 10),
-                              _buildSnapshotCard(state),
-                              const SizedBox(height: 10),
-                              _buildMainFormCard(
-                                state: state,
-                                notifier: notifier,
-                                usuario: usuario,
-                                proceso: proceso,
-                              ),
-                              const SizedBox(height: 10),
+                              if (hasLink) ...[
+                                _buildSnapshotCard(state),
+                                const SizedBox(height: 10),
+                                _buildSmartAlerts(state, proceso),
+                                const SizedBox(height: 10),
+                                _buildMainFormCard(
+                                  state: state,
+                                  notifier: notifier,
+                                  usuario: usuario,
+                                  proceso:
+                                      proceso.isEmpty
+                                          ? AppConstants.procesoEngomado
+                                          : proceso,
+                                ),
+                                const SizedBox(height: 10),
+                              ] else ...[
+                                _buildLockedHint(
+                                  hasCodigo
+                                      ? 'Presione "Buscar urdido" para vincular la referencia y habilitar el proceso.'
+                                      : 'Escanee o ingrese PCP para iniciar engomado.',
+                                ),
+                                const SizedBox(height: 10),
+                              ],
                               _buildQueueCard(state, notifier),
                               const SizedBox(height: 12),
-                              _buildActionButtons(
-                                state: state,
-                                usuario: usuario,
-                                onEnviar:
-                                    () => notifier.enviarEngomado(
+                              if (hasLink)
+                                _buildActionButtons(
+                                  state: state,
+                                  usuario: usuario,
+                                  onEnviar: () async {
+                                    final confirmed = await _confirmarRegistro(
+                                      state: state,
                                       usuario: usuario,
-                                    ),
-                                onLimpiar: () => _limpiar(notifier),
-                              ),
+                                      proceso:
+                                          proceso.isEmpty
+                                              ? AppConstants.procesoEngomado
+                                              : proceso,
+                                    );
+                                    if (!confirmed) return;
+                                    await notifier.enviarEngomado(
+                                      usuario: usuario,
+                                    );
+                                  },
+                                  onLimpiar: () => _limpiar(notifier),
+                                ),
                             ],
                           ),
                         ),
@@ -140,6 +170,115 @@ class _EngomadoScreenState extends ConsumerState<EngomadoScreen>
     return ProductionStatusBanner(
       message: state.message,
       errorMessage: state.errorMessage,
+    );
+  }
+
+  Widget _buildLockedHint(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: CorporateTokens.borderSoft),
+        boxShadow: CorporateTokens.cardShadow,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF1EA),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.link_off_rounded, color: Color(0xFFB67A5A)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: CorporateTokens.navy900,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSmartAlerts(EngomadoState state, String proceso) {
+    final alerts = <String>[];
+    final error = (state.errorMessage ?? '').trim();
+    if (error.isNotEmpty) alerts.add(error);
+    if (_field(state, 'tipo_proceso').isEmpty) {
+      alerts.add('Tipo de proceso sugerido automaticamente: ENGOMADO.');
+    }
+    if (_field(state, 'operario').isEmpty) {
+      alerts.add('Operario pendiente; se autocompleta con el usuario activo.');
+    }
+    if (_field(state, 'codigopcp').isNotEmpty) {
+      alerts.add('Codigo PCP bloqueado por escaneo/vinculacion.');
+    }
+    if (_isProcesoReady(state, proceso)) {
+      alerts.add('Datos completos. Revise el resumen y envie.');
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: CorporateTokens.borderSoft),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Alertas operativas',
+            style: TextStyle(
+              color: CorporateTokens.navy900,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...alerts.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Icon(
+                    item == error && error.isNotEmpty
+                        ? Icons.error_outline_rounded
+                        : Icons.info_outline_rounded,
+                    size: 17,
+                    color:
+                        item == error && error.isNotEmpty
+                            ? const Color(0xFFDC2626)
+                            : const Color(0xFFB67A5A),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: const TextStyle(
+                        color: CorporateTokens.navy900,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -364,6 +503,9 @@ class _EngomadoScreenState extends ConsumerState<EngomadoScreen>
     required String usuario,
     required String proceso,
   }) {
+    final lockedByLink =
+        state.urdidoSnapshot.isNotEmpty ||
+        _field(state, 'codigo_urdido').isNotEmpty;
     return _buildCard(
       title: 'Formulario de proceso',
       children: [
@@ -403,6 +545,7 @@ class _EngomadoScreenState extends ConsumerState<EngomadoScreen>
             proceso: proceso,
             state: state,
             notifier: notifier,
+            lockedByLink: lockedByLink,
           ),
         ),
       ],
@@ -414,6 +557,7 @@ class _EngomadoScreenState extends ConsumerState<EngomadoScreen>
     required String proceso,
     required EngomadoState state,
     required EngomadoNotifier notifier,
+    required bool lockedByLink,
   }) {
     final normalized = proceso.toLowerCase();
     if (normalized == AppConstants.procesoVolteado.toLowerCase()) {
@@ -576,6 +720,7 @@ class _EngomadoScreenState extends ConsumerState<EngomadoScreen>
             hint: 'Viene del escaneo',
             icon: Icons.link_rounded,
             notifier: notifier,
+            readOnly: lockedByLink,
             validator: (value) => _required(value, 'codigo urdido'),
           ),
           const SizedBox(height: 8),
@@ -779,50 +924,57 @@ class _EngomadoScreenState extends ConsumerState<EngomadoScreen>
     required Future<void> Function() onEnviar,
     required VoidCallback onLimpiar,
   }) {
+    final proceso =
+        _field(state, 'tipo_proceso').isEmpty
+            ? AppConstants.procesoEngomado
+            : _field(state, 'tipo_proceso');
+    final ready = _isProcesoReady(state, proceso);
     return Column(
       children: [
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: CorporateTokens.primaryButtonGradient,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ElevatedButton.icon(
-            onPressed:
-                state.isBusy
-                    ? null
-                    : () async {
-                      if (_formKey.currentState?.validate() != true) {
-                        return;
-                      }
-                      await onEnviar();
-                    },
-            icon:
-                state.status == EngomadoStatus.sending
-                    ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                    : const Icon(Icons.send_rounded),
-            label: Text(
-              state.status == EngomadoStatus.sending
-                  ? 'Enviando proceso...'
-                  : 'Registrar proceso',
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 48),
-              disabledBackgroundColor: Colors.transparent,
-            ),
-          ),
-        ),
+        ready
+            ? DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: CorporateTokens.primaryButtonGradient,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ElevatedButton.icon(
+                onPressed:
+                    state.isBusy
+                        ? null
+                        : () async {
+                          if (_formKey.currentState?.validate() != true) {
+                            return;
+                          }
+                          await onEnviar();
+                        },
+                icon:
+                    state.status == EngomadoStatus.sending
+                        ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                        : const Icon(Icons.verified_user_rounded),
+                label: Text(
+                  state.status == EngomadoStatus.sending
+                      ? 'Enviando proceso...'
+                      : 'Revisar y registrar proceso',
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 48),
+                  disabledBackgroundColor: Colors.transparent,
+                ),
+              ),
+            )
+            : _disabledContextButton('Complete datos requeridos del proceso'),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -863,6 +1015,33 @@ class _EngomadoScreenState extends ConsumerState<EngomadoScreen>
     return Icons.view_agenda_rounded;
   }
 
+  Widget _disabledContextButton(String label) {
+    return Container(
+      width: double.infinity,
+      height: 48,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: CorporateTokens.borderSoft),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.edit_note_rounded, color: CorporateTokens.slate500),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              color: CorporateTokens.slate500,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTextField({
     required String keyName,
     required String label,
@@ -873,12 +1052,15 @@ class _EngomadoScreenState extends ConsumerState<EngomadoScreen>
     Widget? suffixIcon,
     int minLines = 1,
     int maxLines = 1,
+    bool readOnly = false,
   }) {
     return TextFormField(
       controller: _controllers[keyName],
       minLines: minLines,
       maxLines: maxLines,
-      onChanged: (value) => notifier.actualizarCampo(keyName, value),
+      readOnly: readOnly,
+      onChanged:
+          readOnly ? null : (value) => notifier.actualizarCampo(keyName, value),
       validator: validator,
       style: const TextStyle(color: CorporateTokens.navy900),
       decoration: _inputDecoration(
@@ -896,6 +1078,7 @@ class _EngomadoScreenState extends ConsumerState<EngomadoScreen>
     required List<String> options,
     required EngomadoNotifier notifier,
     bool allowManual = false,
+    bool enabled = true,
   }) {
     final selected = _controllers[keyName]!.text.trim();
     final cleaned =
@@ -916,16 +1099,20 @@ class _EngomadoScreenState extends ConsumerState<EngomadoScreen>
         hint: 'Ingrese $label',
         icon: Icons.edit_note_rounded,
         notifier: notifier,
+        readOnly: !enabled,
       );
     }
 
     return DropdownButtonFormField<String>(
       value: selected.isEmpty ? null : selected,
-      onChanged: (value) {
-        final newValue = value ?? '';
-        _controllers[keyName]!.text = newValue;
-        notifier.actualizarCampo(keyName, newValue);
-      },
+      onChanged:
+          enabled
+              ? (value) {
+                final newValue = value ?? '';
+                _controllers[keyName]!.text = newValue;
+                notifier.actualizarCampo(keyName, newValue);
+              }
+              : null,
       items:
           cleaned
               .map(
@@ -959,6 +1146,38 @@ class _EngomadoScreenState extends ConsumerState<EngomadoScreen>
       if (controller.text != value) {
         controller.text = value;
       }
+    }
+  }
+
+  void _autofillDefaults(
+    EngomadoState state,
+    EngomadoNotifier notifier,
+    String usuario,
+  ) {
+    final linked =
+        state.urdidoSnapshot.isNotEmpty ||
+        _field(state, 'codigo_urdido').isNotEmpty;
+    if (!linked) return;
+
+    if (_field(state, 'tipo_proceso').isEmpty) {
+      const value = AppConstants.procesoEngomado;
+      _controllers['tipo_proceso']!.text = value;
+      notifier.actualizarCampo('tipo_proceso', value);
+    }
+    if (_field(state, 'turno').isEmpty) {
+      const value = 'Manana';
+      _controllers['turno']!.text = value;
+      notifier.actualizarCampo('turno', value);
+    }
+    if (_field(state, 'operario').isEmpty && usuario.trim().isNotEmpty) {
+      _controllers['operario']!.text = usuario.trim();
+      notifier.actualizarCampo('operario', usuario.trim());
+    }
+    final now = DateTime.now();
+    if (_field(state, 'hora_inicial').isEmpty) {
+      final value = _formatLocalTime(now);
+      _controllers['hora_inicial']!.text = value;
+      notifier.actualizarCampo('hora_inicial', value);
     }
   }
 
@@ -1064,6 +1283,102 @@ class _EngomadoScreenState extends ConsumerState<EngomadoScreen>
     }
 
     return true;
+  }
+
+  Future<bool> _confirmarRegistro({
+    required EngomadoState state,
+    required String usuario,
+    required String proceso,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (dialogContext) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            title: const Text('Confirmar proceso'),
+            content: SizedBox(
+              width: 520,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _confirmRow('PCP', _field(state, 'codigopcp')),
+                  _confirmRow('Proceso', proceso),
+                  _confirmRow(
+                    'Codigo urdido',
+                    _field(state, 'codigo_urdido').isNotEmpty
+                        ? _field(state, 'codigo_urdido')
+                        : (state.urdidoSnapshot['codigo_urdido'] ?? ''),
+                  ),
+                  _confirmRow('Metros', _field(state, 'metros_engomado')),
+                  _confirmRow(
+                    'Peso final',
+                    _field(state, 'peso_engomado_final'),
+                  ),
+                  _confirmRow('Usuario', usuario),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Revisar'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                icon: const Icon(Icons.send_rounded),
+                label: const Text('Confirmar registro'),
+              ),
+            ],
+          ),
+    );
+    return confirmed == true;
+  }
+
+  Widget _confirmRow(String label, String value) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: CorporateTokens.borderSoft),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: CorporateTokens.slate500,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value.trim().isEmpty ? '-' : value.trim(),
+              style: const TextStyle(
+                color: CorporateTokens.navy900,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatLocalTime(DateTime date) {
+    final hh = date.hour.toString().padLeft(2, '0');
+    final mm = date.minute.toString().padLeft(2, '0');
+    return '$hh:$mm';
   }
 
   String _formatDate(String iso) {
