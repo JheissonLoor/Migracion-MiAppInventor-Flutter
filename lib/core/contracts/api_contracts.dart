@@ -45,6 +45,10 @@ class ApiRoutes {
   static const String urdidoHistorialTabla = '/urdido_historial_tabla';
   static const String consultaHistorialTelaCruda =
       '/consulta_historial_telacruda';
+  static const String busquedaTelaCruda = '/busqueda_tela_cruda';
+  static const String editarTelaCruda = '/editar_tela_cruda';
+  static const String siguienteCorrelativoTela = '/siguiente_correlativo';
+  static const String validarRendimientoTela = '/validar_rendimiento';
   static const String generarKardex = '/generar_kardex';
   static const String adminUsers = '/admin_users';
   static const String newUsers = '/new_users';

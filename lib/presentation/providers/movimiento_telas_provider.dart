@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/storage/local_storage.dart';
 import '../../core/utils/qr_image_encoder.dart';
 import '../../data/datasources/remote/movimiento_telas_remote_datasource.dart';
 import 'auth_provider.dart';
@@ -9,7 +8,10 @@ enum MovimientoTelasStatus {
   idle,
   loadingCatalogos,
   generatingCode,
+  searchingEdit,
   sendingCorte,
+  savingEdit,
+  validatingRendimiento,
   generatingQr,
   generatingPdf,
   printing,
@@ -27,6 +29,8 @@ class MovimientoTelasState {
   final String qrRaw;
   final String qrResumen;
   final bool pdfGenerado;
+  final MovimientoTelaEdicionData? edicionData;
+  final MovimientoTelaRendimientoData? rendimiento;
   final String? message;
   final String? errorMessage;
 
@@ -40,6 +44,8 @@ class MovimientoTelasState {
     this.qrRaw = '',
     this.qrResumen = '',
     this.pdfGenerado = false,
+    this.edicionData,
+    this.rendimiento,
     this.message,
     this.errorMessage,
   });
@@ -47,7 +53,10 @@ class MovimientoTelasState {
   bool get isBusy =>
       status == MovimientoTelasStatus.loadingCatalogos ||
       status == MovimientoTelasStatus.generatingCode ||
+      status == MovimientoTelasStatus.searchingEdit ||
       status == MovimientoTelasStatus.sendingCorte ||
+      status == MovimientoTelasStatus.savingEdit ||
+      status == MovimientoTelasStatus.validatingRendimiento ||
       status == MovimientoTelasStatus.generatingQr ||
       status == MovimientoTelasStatus.generatingPdf ||
       status == MovimientoTelasStatus.printing;
@@ -66,6 +75,10 @@ class MovimientoTelasState {
     String? qrRaw,
     String? qrResumen,
     bool? pdfGenerado,
+    MovimientoTelaEdicionData? edicionData,
+    bool clearEdicionData = false,
+    MovimientoTelaRendimientoData? rendimiento,
+    bool clearRendimiento = false,
     String? message,
     bool clearMessage = false,
     String? errorMessage,
@@ -81,6 +94,8 @@ class MovimientoTelasState {
       qrRaw: qrRaw ?? this.qrRaw,
       qrResumen: qrResumen ?? this.qrResumen,
       pdfGenerado: pdfGenerado ?? this.pdfGenerado,
+      edicionData: clearEdicionData ? null : (edicionData ?? this.edicionData),
+      rendimiento: clearRendimiento ? null : (rendimiento ?? this.rendimiento),
       message: clearMessage ? null : (message ?? this.message),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
@@ -88,12 +103,9 @@ class MovimientoTelasState {
 }
 
 class MovimientoTelasNotifier extends StateNotifier<MovimientoTelasState> {
-  static const String _counterPrefix = 'mov_telas_counter_';
-
   final MovimientoTelasRemoteDatasource _datasource;
-  final LocalStorage _storage;
 
-  MovimientoTelasNotifier(this._datasource, this._storage)
+  MovimientoTelasNotifier(this._datasource)
     : super(const MovimientoTelasState()) {
     cargarCatalogos();
   }
@@ -141,27 +153,41 @@ class MovimientoTelasNotifier extends StateNotifier<MovimientoTelasState> {
       status: MovimientoTelasStatus.generatingCode,
       clearError: true,
       clearMessage: true,
+      clearEdicionData: true,
     );
 
-    final correlativo = _leerContador(telar).toString();
-    final fechaCode = _toFechaCodigo(fechaRevisado);
-    final codigoBase = 'T${telar}F$fechaCode-';
+    try {
+      final fechaCode = _toFechaCodigo(fechaRevisado);
+      final codigo = await _datasource.reservarSiguienteCodigo(
+        numTelar: telar,
+        fechaCodigo: fechaCode,
+      );
 
-    state = state.copyWith(
-      status: MovimientoTelasStatus.success,
-      codigoBase: codigoBase,
-      correlativo: correlativo,
-      numCorte: correlativo,
-      qrRaw: '',
-      qrResumen: '',
-      pdfGenerado: false,
-      message: 'Codigo generado correctamente.',
-      clearError: true,
-    );
+      state = state.copyWith(
+        status: MovimientoTelasStatus.success,
+        codigoBase: codigo.codigoBase,
+        correlativo: codigo.correlativo,
+        numCorte: codigo.numCorte,
+        qrRaw: '',
+        qrResumen: '',
+        pdfGenerado: false,
+        message:
+            codigo.codigoSugerido.isNotEmpty
+                ? 'Codigo reservado: ${codigo.codigoSugerido}.'
+                : 'Codigo generado correctamente.',
+        clearError: true,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        status: MovimientoTelasStatus.error,
+        errorMessage: _cleanError(error),
+      );
+    }
   }
 
   void generarQr({
     required String codigoBase,
+    required String correlativo,
     required String numCorte,
     required String numTelar,
     required String opPrefijo,
@@ -173,6 +199,7 @@ class MovimientoTelasNotifier extends StateNotifier<MovimientoTelasState> {
   }) {
     final validationError = _validarCamposQr(
       codigoBase: codigoBase,
+      correlativo: correlativo,
       numCorte: numCorte,
       numTelar: numTelar,
       opPrefijo: opPrefijo,
@@ -192,7 +219,7 @@ class MovimientoTelasNotifier extends StateNotifier<MovimientoTelasState> {
 
     final codigoCompleto = _buildCodigoCompleto(
       codigoBase: codigoBase,
-      numCorte: numCorte,
+      correlativo: correlativo,
     );
     final opCompleto = _sanitize('$opPrefijo$opNumero');
     final articuloClean = _sanitize(articulo);
@@ -238,17 +265,11 @@ class MovimientoTelasNotifier extends StateNotifier<MovimientoTelasState> {
 
     try {
       final message = await _datasource.enviarCorte(payload);
-      final numActual =
-          int.tryParse(payload.numCorte.trim()) ??
-          int.tryParse(payload.correlativo.trim()) ??
-          _leerContador(payload.numTelar.trim());
-      final siguiente = numActual + 1;
-      await _guardarContador(payload.numTelar.trim(), siguiente);
-
       state = state.copyWith(
         status: MovimientoTelasStatus.success,
-        correlativo: siguiente.toString(),
-        numCorte: siguiente.toString(),
+        codigoBase: '',
+        correlativo: '',
+        numCorte: '',
         qrRaw: '',
         qrResumen: '',
         pdfGenerado: false,
@@ -259,6 +280,103 @@ class MovimientoTelasNotifier extends StateNotifier<MovimientoTelasState> {
       state = state.copyWith(
         status: MovimientoTelasStatus.error,
         errorMessage: _cleanError(error),
+      );
+    }
+  }
+
+  Future<void> buscarTelaParaEditar(String codigoTela) async {
+    final codigo = codigoTela.trim();
+    if (codigo.isEmpty) {
+      state = state.copyWith(
+        status: MovimientoTelasStatus.error,
+        errorMessage: 'Ingrese el codigo de tela para editar.',
+      );
+      return;
+    }
+
+    state = state.copyWith(
+      status: MovimientoTelasStatus.searchingEdit,
+      clearError: true,
+      clearMessage: true,
+      clearEdicionData: true,
+      clearRendimiento: true,
+    );
+
+    try {
+      final data = await _datasource.buscarTelaCruda(codigo);
+      state = state.copyWith(
+        status: MovimientoTelasStatus.success,
+        edicionData: data,
+        codigoBase: data.codigoBase,
+        correlativo: data.correlativo,
+        numCorte: data.numCorte,
+        qrRaw: '',
+        qrResumen: '',
+        pdfGenerado: false,
+        message: 'Tela encontrada. Revise los campos antes de editar.',
+        clearError: true,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        status: MovimientoTelasStatus.error,
+        errorMessage: _cleanError(error),
+      );
+    }
+  }
+
+  Future<void> editarTelaCruda(MovimientoTelaEditPayload payload) async {
+    state = state.copyWith(
+      status: MovimientoTelasStatus.savingEdit,
+      clearError: true,
+      clearMessage: true,
+    );
+
+    try {
+      final message = await _datasource.editarTelaCruda(payload);
+      state = state.copyWith(
+        status: MovimientoTelasStatus.success,
+        message: message,
+        clearError: true,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        status: MovimientoTelasStatus.error,
+        errorMessage: _cleanError(error),
+      );
+    }
+  }
+
+  Future<void> validarRendimiento({
+    required String articulo,
+    required String mts,
+    required String peso,
+  }) async {
+    if (articulo.trim().isEmpty || mts.trim().isEmpty || peso.trim().isEmpty) {
+      return;
+    }
+
+    state = state.copyWith(
+      status: MovimientoTelasStatus.validatingRendimiento,
+      clearError: true,
+      clearMessage: true,
+    );
+
+    try {
+      final data = await _datasource.validarRendimiento(
+        articulo: articulo,
+        mts: mts,
+        peso: peso,
+      );
+      state = state.copyWith(
+        status: MovimientoTelasStatus.success,
+        rendimiento: data,
+        message: data.message,
+        clearError: true,
+      );
+    } catch (_) {
+      state = state.copyWith(
+        status: MovimientoTelasStatus.idle,
+        clearRendimiento: true,
       );
     }
   }
@@ -368,21 +486,11 @@ class MovimientoTelasNotifier extends StateNotifier<MovimientoTelasState> {
       qrRaw: '',
       qrResumen: '',
       pdfGenerado: false,
+      clearEdicionData: true,
+      clearRendimiento: true,
       clearError: true,
       clearMessage: true,
     );
-  }
-
-  int _leerContador(String numTelar) {
-    final raw = _storage.getValue(
-      '$_counterPrefix$numTelar',
-      defaultValue: '0',
-    );
-    return int.tryParse(raw) ?? 0;
-  }
-
-  Future<void> _guardarContador(String numTelar, int value) async {
-    await _storage.setValue('$_counterPrefix$numTelar', value.toString());
   }
 
   String _toFechaCodigo(DateTime date) {
@@ -394,17 +502,18 @@ class MovimientoTelasNotifier extends StateNotifier<MovimientoTelasState> {
 
   String _buildCodigoCompleto({
     required String codigoBase,
-    required String numCorte,
+    required String correlativo,
   }) {
     final base = codigoBase.trim();
-    final corte = numCorte.trim();
-    if (base.isEmpty) return corte;
-    if (base.endsWith('-')) return '$base$corte';
+    final suffix = correlativo.trim();
+    if (base.isEmpty) return suffix;
+    if (base.endsWith('-')) return '$base$suffix';
     return base;
   }
 
   String? _validarCamposQr({
     required String codigoBase,
+    required String correlativo,
     required String numCorte,
     required String numTelar,
     required String opPrefijo,
@@ -417,7 +526,8 @@ class MovimientoTelasNotifier extends StateNotifier<MovimientoTelasState> {
     if (codigoBase.trim().isEmpty) {
       return 'Primero genere el codigo de tela.';
     }
-    if (numCorte.trim().isEmpty ||
+    if (correlativo.trim().isEmpty ||
+        numCorte.trim().isEmpty ||
         numTelar.trim().isEmpty ||
         opPrefijo.trim().isEmpty ||
         opNumero.trim().isEmpty ||
@@ -460,6 +570,5 @@ final movimientoTelasProvider =
     StateNotifierProvider<MovimientoTelasNotifier, MovimientoTelasState>((ref) {
       return MovimientoTelasNotifier(
         ref.read(movimientoTelasDatasourceProvider),
-        ref.read(localStorageProvider),
       );
     });

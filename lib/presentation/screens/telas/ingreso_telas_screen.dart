@@ -9,6 +9,8 @@ import '../../providers/movimiento_telas_provider.dart';
 import '../../widgets/enterprise_backdrop.dart';
 import '../../widgets/production/production_visuals.dart';
 
+enum _IngresoTelasMode { none, nuevo, editar }
+
 class IngresoTelasScreen extends ConsumerStatefulWidget {
   const IngresoTelasScreen({super.key});
 
@@ -29,6 +31,7 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
   ];
   static const _cds = <String>['', 'C', 'D'];
 
+  final _codigoBusqueda = TextEditingController();
   final _numTelar = TextEditingController();
   final _codigoBase = TextEditingController();
   final _correlativo = TextEditingController();
@@ -44,10 +47,12 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
   final _nombre = TextEditingController();
   final _fallaPrincipal = TextEditingController();
   final _fallasSecundarias = TextEditingController();
+  final _fallas = List.generate(4, (_) => TextEditingController());
 
   late final AnimationController _entryController;
   late final Animation<double> _fade;
 
+  _IngresoTelasMode _mode = _IngresoTelasMode.none;
   String _op = '';
   String _cc = '';
   String _cd = '';
@@ -77,6 +82,7 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
 
   @override
   void dispose() {
+    _codigoBusqueda.dispose();
     _numTelar.dispose();
     _codigoBase.dispose();
     _correlativo.dispose();
@@ -92,6 +98,9 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     _nombre.dispose();
     _fallaPrincipal.dispose();
     _fallasSecundarias.dispose();
+    for (final controller in _fallas) {
+      controller.dispose();
+    }
     _entryController.dispose();
     super.dispose();
   }
@@ -109,14 +118,14 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
       _nombre.text = user;
     }
 
-    ref.listen<MovimientoTelasState>(movimientoTelasProvider, (_, next) {
+    ref.listen<MovimientoTelasState>(movimientoTelasProvider, (previous, next) {
       if (!mounted) return;
       _codigoBase.text = next.codigoBase;
-      if (next.correlativo.trim().isNotEmpty) {
-        _correlativo.text = next.correlativo;
-      }
-      if (next.numCorte.trim().isNotEmpty) {
-        _numCorte.text = next.numCorte;
+      _correlativo.text = next.correlativo;
+      _numCorte.text = next.numCorte;
+      if (next.edicionData != null &&
+          previous?.edicionData != next.edicionData) {
+        _aplicarEdicion(next.edicionData!);
       }
     });
 
@@ -151,8 +160,15 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
                             const SizedBox(height: 10),
                             _buildSmartAlerts(state),
                             const SizedBox(height: 10),
-                            isTablet
-                                ? Row(
+                            _modeSelector(state, notifier),
+                            if (_mode == _IngresoTelasMode.editar) ...[
+                              const SizedBox(height: 10),
+                              _editSearchCard(state, notifier),
+                            ],
+                            if (_mode != _IngresoTelasMode.none) ...[
+                              const SizedBox(height: 10),
+                              if (isTablet && _mode == _IngresoTelasMode.nuevo)
+                                Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Expanded(
@@ -166,13 +182,17 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
                                     ),
                                   ],
                                 )
-                                : Column(
+                              else
+                                Column(
                                   children: [
                                     _formCard(state, notifier),
-                                    const SizedBox(height: 10),
-                                    _qrCard(state, notifier),
+                                    if (_mode == _IngresoTelasMode.nuevo) ...[
+                                      const SizedBox(height: 10),
+                                      _qrCard(state, notifier),
+                                    ],
                                   ],
                                 ),
+                            ],
                           ],
                         ),
                       ),
@@ -197,18 +217,209 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     );
   }
 
+  Widget _modeSelector(
+    MovimientoTelasState state,
+    MovimientoTelasNotifier notifier,
+  ) {
+    return _card(
+      'Operacion',
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Seleccione primero que va a realizar. Esto replica el flujo MIT: Nuevo o Editar.',
+            style: TextStyle(
+              color: CorporateTokens.slate500,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final stacked = constraints.maxWidth < 620;
+              final buttons = [
+                _modeButton(
+                  title: 'Nuevo corte',
+                  subtitle: 'Generar codigo, registrar corte y emitir QR.',
+                  icon: Icons.add_circle_outline_rounded,
+                  selected: _mode == _IngresoTelasMode.nuevo,
+                  onPressed:
+                      state.isBusy
+                          ? null
+                          : () {
+                            _limpiar(notifier, keepMode: true);
+                            setState(() => _mode = _IngresoTelasMode.nuevo);
+                          },
+                ),
+                _modeButton(
+                  title: 'Editar corte',
+                  subtitle: 'Buscar codigo de tela y actualizar datos.',
+                  icon: Icons.edit_note_rounded,
+                  selected: _mode == _IngresoTelasMode.editar,
+                  onPressed:
+                      state.isBusy
+                          ? null
+                          : () {
+                            _limpiar(notifier, keepMode: true);
+                            setState(() => _mode = _IngresoTelasMode.editar);
+                          },
+                ),
+              ];
+              if (stacked) {
+                return Column(children: _withSpacing(buttons));
+              }
+              return Row(
+                children:
+                    buttons
+                        .map((button) => Expanded(child: button))
+                        .expand((child) => [child, const SizedBox(width: 10)])
+                        .toList()
+                      ..removeLast(),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _modeButton({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback? onPressed,
+  }) {
+    final color = selected ? const Color(0xFF0EA5A4) : CorporateTokens.slate500;
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.all(14),
+        side: BorderSide(
+          color:
+              selected ? const Color(0xFF0EA5A4) : CorporateTokens.borderSoft,
+          width: selected ? 1.6 : 1,
+        ),
+        backgroundColor:
+            selected ? const Color(0xFFEAFDFC) : const Color(0xFFF8FAFC),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: selected ? CorporateTokens.navy900 : color,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: CorporateTokens.slate500,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (selected)
+            const Icon(Icons.check_circle_rounded, color: Color(0xFF0EA5A4)),
+        ],
+      ),
+    );
+  }
+
+  Widget _editSearchCard(
+    MovimientoTelasState state,
+    MovimientoTelasNotifier notifier,
+  ) {
+    final isBusy = state.isBusy;
+    return _card(
+      'Buscar tela para editar',
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Ingrese el CodigoTela exacto. Ejemplo: T30F030626-1-01.',
+            style: TextStyle(
+              color: CorporateTokens.slate500,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final stacked = constraints.maxWidth < 620;
+              final input = _input(
+                _codigoBusqueda,
+                'Codigo de tela',
+                icon: Icons.manage_search_rounded,
+              );
+              final button = _primaryButton(
+                onPressed:
+                    isBusy
+                        ? null
+                        : () =>
+                            notifier.buscarTelaParaEditar(_codigoBusqueda.text),
+                icon:
+                    state.status == MovimientoTelasStatus.searchingEdit
+                        ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                        : const Icon(Icons.search_rounded, size: 18),
+                label: 'Buscar',
+              );
+
+              if (stacked) {
+                return Column(
+                  children: [input, const SizedBox(height: 10), button],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: input),
+                  const SizedBox(width: 10),
+                  SizedBox(width: 180, child: button),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _formCard(
     MovimientoTelasState state,
     MovimientoTelasNotifier notifier,
   ) {
     final isBusy = state.isBusy;
     final corteReady = _isCorteReady();
+    final isEditMode = _mode == _IngresoTelasMode.editar;
     final fallaActual = _fallaPrincipal.text.trim();
     final fallaCatalogoValue =
         state.codigosFalla.contains(fallaActual) ? fallaActual : null;
 
     return _card(
-      'Datos del corte',
+      isEditMode ? 'Datos del corte a editar' : 'Datos del corte nuevo',
       Column(
         children: [
           _section(
@@ -227,6 +438,7 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
                       'Numero de telar',
                       icon: Icons.precision_manufacturing_rounded,
                       number: true,
+                      readOnly: isEditMode,
                     ),
                     DropdownButtonFormField<String>(
                       value: _op,
@@ -303,8 +515,59 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
                             readOnly: true,
                           ),
                           const SizedBox(height: 10),
+                          if (!isEditMode)
+                            SizedBox(
+                              width: double.infinity,
+                              child: _primaryButton(
+                                onPressed:
+                                    isBusy
+                                        ? null
+                                        : () => _generarCodigo(notifier),
+                                icon:
+                                    state.status ==
+                                            MovimientoTelasStatus.generatingCode
+                                        ? const SizedBox(
+                                          width: 14,
+                                          height: 14,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                        : const Icon(
+                                          Icons.auto_awesome_rounded,
+                                          size: 18,
+                                        ),
+                                label: 'Generar codigo',
+                              ),
+                            ),
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: _input(
+                            _codigoBase,
+                            'Codigo base',
+                            icon: Icons.qr_code_2_rounded,
+                            readOnly: true,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _input(
+                            _correlativo,
+                            'Correlativo',
+                            icon: Icons.format_list_numbered_rounded,
+                            readOnly: true,
+                          ),
+                        ),
+                        if (!isEditMode) ...[
+                          const SizedBox(width: 10),
                           SizedBox(
-                            width: double.infinity,
+                            width: 190,
                             child: _primaryButton(
                               onPressed:
                                   isBusy
@@ -329,52 +592,6 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
                             ),
                           ),
                         ],
-                      );
-                    }
-
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: _input(
-                            _codigoBase,
-                            'Codigo base',
-                            icon: Icons.qr_code_2_rounded,
-                            readOnly: true,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _input(
-                            _correlativo,
-                            'Correlativo',
-                            icon: Icons.format_list_numbered_rounded,
-                            readOnly: true,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        SizedBox(
-                          width: 190,
-                          child: _primaryButton(
-                            onPressed:
-                                isBusy ? null : () => _generarCodigo(notifier),
-                            icon:
-                                state.status ==
-                                        MovimientoTelasStatus.generatingCode
-                                    ? const SizedBox(
-                                      width: 14,
-                                      height: 14,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                    : const Icon(
-                                      Icons.auto_awesome_rounded,
-                                      size: 18,
-                                    ),
-                            label: 'Generar codigo',
-                          ),
-                        ),
                       ],
                     );
                   },
@@ -415,6 +632,18 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
                   'Peso (KG)',
                   icon: Icons.scale_rounded,
                   decimal: true,
+                  suffix: IconButton(
+                    tooltip: 'Validar rendimiento',
+                    onPressed:
+                        isBusy
+                            ? null
+                            : () => notifier.validarRendimiento(
+                              articulo: _articulo.text,
+                              mts: _mts.text,
+                              peso: _peso.text,
+                            ),
+                    icon: const Icon(Icons.speed_rounded),
+                  ),
                 ),
                 _input(
                   _numCorte,
@@ -496,7 +725,7 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
             icon: Icons.report_problem_rounded,
             title: 'Responsable y fallas',
             subtitle:
-                'Control de defecto principal y observaciones complementarias.',
+                'Seleccione desde catalogo igual que en MIT: principal y hasta 4 secundarias.',
             child: Column(
               children: [
                 _adaptiveGrid(
@@ -504,54 +733,40 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
                   tabletColumns: 2,
                   desktopColumns: 3,
                   children: [
-                    _input(
-                      _nombre,
-                      'Revisador',
-                      icon: Icons.badge_rounded,
-                      readOnly: true,
+                    _responsableField(),
+                    _fallaField(
+                      controller: _fallaPrincipal,
+                      label: 'Falla principal',
+                      value: fallaCatalogoValue,
+                      codigos: state.codigosFalla,
+                      enabled: !isBusy,
+                      requiredField: true,
                     ),
-                    _input(
-                      _fallaPrincipal,
-                      'Falla principal',
-                      icon: Icons.warning_amber_rounded,
+                    _infoTile(
+                      icon: Icons.rule_rounded,
+                      title: 'Regla',
+                      value: 'La falla principal es obligatoria.',
                     ),
-                    state.codigosFalla.isEmpty
-                        ? _infoTile(
-                          icon: Icons.info_outline_rounded,
-                          title: 'Catalogo de fallas',
-                          value: 'Sin codigos cargados',
-                        )
-                        : DropdownButtonFormField<String>(
-                          value: fallaCatalogoValue,
-                          onChanged:
-                              isBusy
-                                  ? null
-                                  : (v) => setState(
-                                    () => _fallaPrincipal.text = v ?? '',
-                                  ),
-                          decoration: _decoration(
-                            'Codigo falla sugerido',
-                            Icons.list_alt_rounded,
-                          ),
-                          isExpanded: true,
-                          items:
-                              state.codigosFalla
-                                  .map(
-                                    (e) => DropdownMenuItem(
-                                      value: e,
-                                      child: Text(e),
-                                    ),
-                                  )
-                                  .toList(),
-                        ),
                   ],
                 ),
                 const SizedBox(height: 10),
-                _input(
-                  _fallasSecundarias,
-                  'Fallas secundarias (separadas por ;)',
-                  icon: Icons.grid_view_rounded,
-                  maxLines: 2,
+                _adaptiveGrid(
+                  mobileColumns: 1,
+                  tabletColumns: 2,
+                  desktopColumns: 4,
+                  children: [
+                    for (var index = 0; index < _fallas.length; index++)
+                      _fallaField(
+                        controller: _fallas[index],
+                        label: 'Falla secundaria ${index + 1}',
+                        value:
+                            state.codigosFalla.contains(_fallas[index].text)
+                                ? _fallas[index].text
+                                : null,
+                        codigos: state.codigosFalla,
+                        enabled: !isBusy,
+                      ),
+                  ],
                 ),
               ],
             ),
@@ -560,27 +775,17 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
           LayoutBuilder(
             builder: (context, constraints) {
               final stacked = constraints.maxWidth < 560;
+              final action = _mainActionButton(
+                state: state,
+                notifier: notifier,
+                isBusy: isBusy,
+                corteReady: corteReady,
+                isEditMode: isEditMode,
+              );
               if (stacked) {
                 return Column(
                   children: [
-                    _primaryButton(
-                      onPressed:
-                          isBusy || !corteReady
-                              ? null
-                              : () => _confirmarYRegistrarCorte(notifier),
-                      icon:
-                          state.status == MovimientoTelasStatus.sendingCorte
-                              ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                              : const Icon(Icons.task_alt_rounded, size: 18),
-                      label: 'Registrar corte',
-                    ),
+                    action,
                     const SizedBox(height: 10),
                     SizedBox(
                       width: double.infinity,
@@ -599,26 +804,7 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
 
               return Row(
                 children: [
-                  Expanded(
-                    child: _primaryButton(
-                      onPressed:
-                          isBusy || !corteReady
-                              ? null
-                              : () => _confirmarYRegistrarCorte(notifier),
-                      icon:
-                          state.status == MovimientoTelasStatus.sendingCorte
-                              ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                              : const Icon(Icons.task_alt_rounded, size: 18),
-                      label: 'Registrar corte',
-                    ),
-                  ),
+                  Expanded(child: action),
                   const SizedBox(width: 10),
                   Expanded(
                     child: OutlinedButton.icon(
@@ -636,6 +822,53 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _mainActionButton({
+    required MovimientoTelasState state,
+    required MovimientoTelasNotifier notifier,
+    required bool isBusy,
+    required bool corteReady,
+    required bool isEditMode,
+  }) {
+    if (isEditMode) {
+      final editReady = _isEditReady();
+      return _primaryButton(
+        onPressed:
+            isBusy || !editReady ? null : () => _confirmarYEditar(notifier),
+        icon:
+            state.status == MovimientoTelasStatus.savingEdit
+                ? const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+                : const Icon(Icons.save_rounded, size: 18),
+        label: 'Guardar edicion',
+      );
+    }
+
+    return _primaryButton(
+      onPressed:
+          isBusy || !corteReady
+              ? null
+              : () => _confirmarYRegistrarCorte(notifier),
+      icon:
+          state.status == MovimientoTelasStatus.sendingCorte
+              ? const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+              : const Icon(Icons.task_alt_rounded, size: 18),
+      label: 'Registrar corte',
     );
   }
 
@@ -860,6 +1093,15 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     );
   }
 
+  List<Widget> _withSpacing(List<Widget> children, {double gap = 10}) {
+    final result = <Widget>[];
+    for (var index = 0; index < children.length; index++) {
+      if (index > 0) result.add(SizedBox(height: gap));
+      result.add(children[index]);
+    }
+    return result;
+  }
+
   Widget _infoTile({
     required IconData icon,
     required String title,
@@ -905,6 +1147,59 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     );
   }
 
+  Widget _responsableField() {
+    final value = _nombre.text.trim().isEmpty ? 'Sin usuario' : _nombre.text;
+    return _infoTile(
+      icon: Icons.badge_rounded,
+      title: 'Responsable',
+      value: value,
+    );
+  }
+
+  Widget _fallaField({
+    required TextEditingController controller,
+    required String label,
+    required String? value,
+    required List<String> codigos,
+    required bool enabled,
+    bool requiredField = false,
+  }) {
+    if (codigos.isEmpty) {
+      return _input(
+        controller,
+        requiredField ? '$label *' : label,
+        icon:
+            requiredField
+                ? Icons.warning_amber_rounded
+                : Icons.playlist_add_check_rounded,
+      );
+    }
+
+    return DropdownButtonFormField<String>(
+      value: value,
+      onChanged:
+          enabled
+              ? (selected) => setState(() => controller.text = selected ?? '')
+              : null,
+      decoration: _decoration(
+        requiredField ? '$label *' : label,
+        requiredField
+            ? Icons.warning_amber_rounded
+            : Icons.playlist_add_check_rounded,
+      ),
+      isExpanded: true,
+      items: [
+        DropdownMenuItem<String>(
+          value: '',
+          child: Text(requiredField ? 'Seleccione falla' : 'Sin falla'),
+        ),
+        ...codigos.map(
+          (item) => DropdownMenuItem(value: item, child: Text(item)),
+        ),
+      ],
+    );
+  }
+
   Widget _card(String title, Widget child) {
     return ProductionCard(
       title: title,
@@ -925,8 +1220,19 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     final alerts = <String>[];
     final error = (state.errorMessage ?? '').trim();
     if (error.isNotEmpty) alerts.add(error);
+    if (_mode == _IngresoTelasMode.none) {
+      alerts.add(
+        'Seleccione Nuevo o Editar para mostrar solo los campos necesarios.',
+      );
+    }
+    if (_mode == _IngresoTelasMode.editar && _codigoBase.text.trim().isEmpty) {
+      alerts.add('Modo editar: busque el CodigoTela antes de modificar datos.');
+    }
     if (_codigoBase.text.trim().isEmpty && _numTelar.text.trim().isNotEmpty) {
       alerts.add('Genere el codigo para bloquear base, correlativo y corte.');
+    }
+    if (state.rendimiento != null) {
+      alerts.add(state.rendimiento!.message);
     }
     if (_fechaCorte.text.trim().isEmpty) {
       alerts.add('Fecha de corte pendiente. Seleccionela antes de registrar.');
@@ -997,13 +1303,18 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
   }
 
   Widget _buildFlowGuide(MovimientoTelasState state) {
+    final hasMode = _mode != _IngresoTelasMode.none;
+    final isEditMode = _mode == _IngresoTelasMode.editar;
+    final editLoaded = isEditMode && _codigoBase.text.trim().isNotEmpty;
     final baseReady =
         _numTelar.text.trim().isNotEmpty &&
         _op.trim().isNotEmpty &&
         _opNumero.text.trim().isNotEmpty &&
         _articulo.text.trim().isNotEmpty;
     final codeReady =
-        _codigoBase.text.trim().isNotEmpty && _numCorte.text.trim().isNotEmpty;
+        _codigoBase.text.trim().isNotEmpty &&
+        _correlativo.text.trim().isNotEmpty &&
+        _numCorte.text.trim().isNotEmpty;
     final corteReady = _isCorteReady();
     final qrReady = state.qrRaw.trim().isNotEmpty;
     final hasError = (state.errorMessage ?? '').trim().isNotEmpty;
@@ -1011,6 +1322,14 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     final signal =
         hasError
             ? OperationSignalLevel.error
+            : !hasMode
+            ? OperationSignalLevel.neutral
+            : isEditMode
+            ? (_isEditReady()
+                ? OperationSignalLevel.ready
+                : (editLoaded
+                    ? OperationSignalLevel.warning
+                    : OperationSignalLevel.neutral))
             : (qrReady
                 ? OperationSignalLevel.ready
                 : (codeReady || baseReady
@@ -1019,6 +1338,14 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     final helper =
         hasError
             ? state.errorMessage!.trim()
+            : !hasMode
+            ? 'Seleccione Nuevo o Editar para iniciar el flujo correcto.'
+            : isEditMode && !editLoaded
+            ? 'Busque el CodigoTela antes de editar.'
+            : isEditMode && _isEditReady()
+            ? 'Edicion lista. Revise y guarde cambios.'
+            : isEditMode
+            ? 'Complete articulo, medidas, calidad, fecha y falla principal.'
             : qrReady
             ? 'QR listo. Registre el dato y luego imprima la etiqueta.'
             : corteReady
@@ -1032,40 +1359,48 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
       statusLabel:
           hasError
               ? 'REVISAR'
+              : !hasMode
+              ? 'SELECCIONAR'
+              : isEditMode
+              ? (_isEditReady() ? 'EDICION LISTA' : 'EDITANDO')
               : (qrReady ? 'QR LISTO' : (corteReady ? 'LISTO' : 'PENDIENTE')),
       helperText: helper,
       signal: signal,
       accentColor: const Color(0xFF0EA5A4),
       steps: [
         OperationStepData(
-          label: 'Datos base',
-          icon: Icons.assignment_rounded,
-          done: baseReady,
-          active: !baseReady,
+          label: 'Modo',
+          icon: Icons.touch_app_rounded,
+          done: hasMode,
+          active: !hasMode,
         ),
         OperationStepData(
-          label: 'Generar codigo',
-          icon: Icons.tag_rounded,
-          done: codeReady,
-          active: baseReady && !codeReady,
+          label: isEditMode ? 'Buscar tela' : 'Generar codigo',
+          icon: isEditMode ? Icons.manage_search_rounded : Icons.tag_rounded,
+          done: isEditMode ? editLoaded : codeReady,
+          active:
+              hasMode && (isEditMode ? !editLoaded : baseReady && !codeReady),
         ),
         OperationStepData(
-          label: 'Completar corte',
+          label: isEditMode ? 'Editar campos' : 'Completar corte',
           icon: Icons.content_cut_rounded,
-          done: corteReady,
-          active: codeReady && !corteReady,
+          done: isEditMode ? _isEditReady() : corteReady,
+          active:
+              isEditMode
+                  ? editLoaded && !_isEditReady()
+                  : codeReady && !corteReady,
         ),
         OperationStepData(
-          label: 'QR e impresion',
-          icon: Icons.qr_code_rounded,
-          done: qrReady,
-          active: corteReady && !qrReady,
+          label: isEditMode ? 'Guardar' : 'QR e impresion',
+          icon: isEditMode ? Icons.save_rounded : Icons.qr_code_rounded,
+          done: isEditMode ? _isEditReady() : qrReady,
+          active: isEditMode ? _isEditReady() : corteReady && !qrReady,
         ),
       ],
       summary: [
         OperationSummaryItem(
           label: 'Codigo',
-          value: '${_codigoBase.text}${_numCorte.text}',
+          value: _codigoCompleto(),
           icon: Icons.confirmation_number_rounded,
         ),
         OperationSummaryItem(
@@ -1235,13 +1570,7 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     final error = _validarCorte();
     if (error != null) return notifier.notificarError(error);
 
-    final fallas =
-        _fallasSecundarias.text
-            .split(';')
-            .map((e) => e.trim())
-            .where((e) => e.isNotEmpty)
-            .take(4)
-            .toList();
+    final fallas = _fallasSeleccionadas();
 
     final payload = MovimientoTelaCortePayload(
       codigoBase: _codigoBase.text,
@@ -1286,7 +1615,7 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _confirmRow('Codigo', '${_codigoBase.text}${_numCorte.text}'),
+                  _confirmRow('Codigo', _codigoCompleto()),
                   _confirmRow('Telar', _numTelar.text),
                   _confirmRow('OP', '$_op${_opNumero.text}'),
                   _confirmRow('Articulo', _articulo.text),
@@ -1313,6 +1642,74 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     }
   }
 
+  Future<void> _confirmarYEditar(MovimientoTelasNotifier notifier) async {
+    final error = _validarEdicion();
+    if (error != null) return notifier.notificarError(error);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (dialogContext) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            title: const Text('Confirmar edicion'),
+            content: SizedBox(
+              width: 520,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _confirmRow('Codigo', _codigoCompleto()),
+                  _confirmRow('OP', '$_op${_opNumero.text}'),
+                  _confirmRow('Articulo', _articulo.text),
+                  _confirmRow('MTS / KG', '${_mts.text} / ${_peso.text}'),
+                  _confirmRow('Falla principal', _fallaPrincipal.text),
+                  _confirmRow('Responsable', _nombre.text),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Revisar'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                icon: const Icon(Icons.save_rounded),
+                label: const Text('Guardar edicion'),
+              ),
+            ],
+          ),
+    );
+
+    if (confirmed == true) {
+      await _editarTela(notifier);
+    }
+  }
+
+  Future<void> _editarTela(MovimientoTelasNotifier notifier) async {
+    final error = _validarEdicion();
+    if (error != null) return notifier.notificarError(error);
+
+    final payload = MovimientoTelaEditPayload(
+      codigoTela: _codigoCompleto(),
+      opPrefijo: _op,
+      opNumero: _opNumero.text,
+      articulo: _articulo.text,
+      metroCorte: _mts.text,
+      ancho: _ancho.text,
+      peso: _peso.text,
+      cc: _cc,
+      cd: _cd,
+      fechaCorte: _fechaCorte.text,
+      fallaPrincipal: _fallaPrincipal.text,
+      fallasSecundarias: _fallasSeleccionadas(),
+    );
+
+    await notifier.editarTelaCruda(payload);
+  }
+
   void _generarQr(MovimientoTelasNotifier notifier) {
     final error = _validarQr();
     if (error != null) {
@@ -1320,6 +1717,7 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     }
     notifier.generarQr(
       codigoBase: _codigoBase.text,
+      correlativo: _correlativo.text,
       numCorte: _numCorte.text,
       numTelar: _numTelar.text,
       opPrefijo: _op,
@@ -1336,6 +1734,7 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
       return 'Primero genere el codigo.';
     }
     if (_numTelar.text.trim().isEmpty ||
+        _correlativo.text.trim().isEmpty ||
         _articulo.text.trim().isEmpty ||
         _peso.text.trim().isEmpty ||
         _ancho.text.trim().isEmpty ||
@@ -1354,12 +1753,36 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     return null;
   }
 
+  String? _validarEdicion() {
+    if (_codigoCompleto().trim().isEmpty) {
+      return 'Primero busque un CodigoTela para editar.';
+    }
+    if (_articulo.text.trim().isEmpty ||
+        _mts.text.trim().isEmpty ||
+        _ancho.text.trim().isEmpty ||
+        _peso.text.trim().isEmpty ||
+        _fechaCorte.text.trim().isEmpty ||
+        _op.trim().isEmpty ||
+        _opNumero.text.trim().isEmpty ||
+        _cc.trim().isEmpty ||
+        _cd.trim().isEmpty) {
+      return 'Complete los campos obligatorios de edicion.';
+    }
+    if (_fallaPrincipal.text.trim().isEmpty) {
+      return 'Seleccione la falla principal.';
+    }
+    return null;
+  }
+
   bool _isCorteReady() => _validarCorte() == null;
 
   bool _isQrReady() => _validarQr() == null;
 
+  bool _isEditReady() => _validarEdicion() == null;
+
   String? _validarQr() {
     if (_codigoBase.text.trim().isEmpty ||
+        _correlativo.text.trim().isEmpty ||
         _numCorte.text.trim().isEmpty ||
         _numTelar.text.trim().isEmpty ||
         _op.trim().isEmpty ||
@@ -1386,8 +1809,55 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     }
   }
 
-  void _limpiar(MovimientoTelasNotifier notifier) {
+  List<String> _fallasSeleccionadas() {
+    return _fallas
+        .map((controller) => controller.text.trim())
+        .where((value) => value.isNotEmpty)
+        .take(4)
+        .toList(growable: false);
+  }
+
+  String _codigoCompleto() {
+    final base = _codigoBase.text.trim();
+    final correlativo = _correlativo.text.trim();
+    if (base.isEmpty) return correlativo;
+    if (base.endsWith('-')) return '$base$correlativo';
+    return base;
+  }
+
+  void _aplicarEdicion(MovimientoTelaEdicionData data) {
+    _numTelar.text = data.numTelar;
+    _codigoBase.text = data.codigoBase;
+    _correlativo.text = data.correlativo;
+    _op = _ops.contains(data.opPrefijo) ? data.opPrefijo : '';
+    _opNumero.text = data.opNumero;
+    _articulo.text = data.articulo;
+    _numPlegador.text = data.numPlegador;
+    _mts.text = data.metroCorte;
+    _ancho.text = data.ancho;
+    _peso.text = data.peso;
+    _cc = _ccs.contains(data.cc) ? data.cc : '';
+    _cd = _cds.contains(data.cd) ? data.cd : '';
+    _fechaCorte.text = data.fechaCorte;
+    _fechaRevisado.text =
+        data.fechaRevisado.isNotEmpty
+            ? data.fechaRevisado
+            : _formatDate(DateTime.now());
+    _numCorte.text = data.numCorte;
+    _nombre.text = data.nombre;
+    _fallaPrincipal.text = data.fallaPrincipal;
+    for (var index = 0; index < _fallas.length; index++) {
+      _fallas[index].text =
+          index < data.fallasSecundarias.length
+              ? data.fallasSecundarias[index]
+              : '';
+    }
+    setState(() {});
+  }
+
+  void _limpiar(MovimientoTelasNotifier notifier, {bool keepMode = false}) {
     _numTelar.clear();
+    _codigoBusqueda.clear();
     _codigoBase.clear();
     _correlativo.clear();
     _opNumero.clear();
@@ -1401,9 +1871,15 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     _numCorte.clear();
     _fallaPrincipal.clear();
     _fallasSecundarias.clear();
+    for (final controller in _fallas) {
+      controller.clear();
+    }
     _op = '';
     _cc = '';
     _cd = '';
+    if (!keepMode) {
+      _mode = _IngresoTelasMode.none;
+    }
     notifier.resetFormulario();
     setState(() {});
   }

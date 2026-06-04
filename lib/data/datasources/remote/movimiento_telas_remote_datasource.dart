@@ -13,6 +13,36 @@ class MovimientoTelasCatalogosData {
   });
 }
 
+class MovimientoTelaCodigoData {
+  final String codigoBase;
+  final String correlativo;
+  final String numCorte;
+  final String codigoSugerido;
+
+  const MovimientoTelaCodigoData({
+    required this.codigoBase,
+    required this.correlativo,
+    required this.numCorte,
+    required this.codigoSugerido,
+  });
+
+  factory MovimientoTelaCodigoData.fromMap(Map<String, dynamic> map) {
+    final codigoBase = (map['telas_cod'] ?? '').toString().trim();
+    final correlativo = (map['correlativo'] ?? '').toString().trim();
+    final numCorte =
+        (map['corte'] ?? map['num_corte'] ?? correlativo).toString().trim();
+    final codigoSugerido =
+        (map['codigo_sugerido'] ?? '$codigoBase$correlativo').toString().trim();
+
+    return MovimientoTelaCodigoData(
+      codigoBase: codigoBase,
+      correlativo: correlativo,
+      numCorte: numCorte,
+      codigoSugerido: codigoSugerido,
+    );
+  }
+}
+
 class MovimientoTelaCortePayload {
   final String codigoBase;
   final String correlativo;
@@ -53,6 +83,154 @@ class MovimientoTelaCortePayload {
     required this.nombre,
     required this.fallaPrincipal,
   });
+}
+
+class MovimientoTelaEdicionData {
+  final String numTelar;
+  final String codigoBase;
+  final String correlativo;
+  final String opPrefijo;
+  final String opNumero;
+  final String articulo;
+  final String numPlegador;
+  final String metroCorte;
+  final String ancho;
+  final String peso;
+  final String cc;
+  final String cd;
+  final String fechaCorte;
+  final String fechaRevisado;
+  final List<String> fallasSecundarias;
+  final String fallaPrincipal;
+  final String numCorte;
+  final String nombre;
+
+  const MovimientoTelaEdicionData({
+    required this.numTelar,
+    required this.codigoBase,
+    required this.correlativo,
+    required this.opPrefijo,
+    required this.opNumero,
+    required this.articulo,
+    required this.numPlegador,
+    required this.metroCorte,
+    required this.ancho,
+    required this.peso,
+    required this.cc,
+    required this.cd,
+    required this.fechaCorte,
+    required this.fechaRevisado,
+    required this.fallasSecundarias,
+    required this.fallaPrincipal,
+    required this.numCorte,
+    required this.nombre,
+  });
+
+  String get codigoCompleto => '$codigoBase$correlativo';
+
+  factory MovimientoTelaEdicionData.fromDynamic(dynamic raw) {
+    final source = raw is Map && raw['data'] != null ? raw['data'] : raw;
+    if (source is! List) {
+      throw Exception('Respuesta invalida de /busqueda_tela_cruda');
+    }
+
+    String at(int index) =>
+        index < source.length ? (source[index] ?? '').toString().trim() : '';
+
+    final codigoBaseRaw = at(1);
+    final codigoBase =
+        codigoBaseRaw.isEmpty || codigoBaseRaw.endsWith('-')
+            ? codigoBaseRaw
+            : '$codigoBaseRaw-';
+
+    return MovimientoTelaEdicionData(
+      numTelar: at(0),
+      codigoBase: codigoBase,
+      correlativo: at(2),
+      opPrefijo: at(3),
+      opNumero: at(4),
+      articulo: at(5),
+      numPlegador: at(6),
+      metroCorte: at(7),
+      ancho: at(8),
+      peso: at(9),
+      cc: at(10),
+      cd: at(11),
+      fechaCorte: at(12),
+      fechaRevisado: at(13),
+      fallasSecundarias: [at(14), at(15), at(16), at(17)],
+      fallaPrincipal: at(18),
+      numCorte: at(19),
+      nombre: at(20),
+    );
+  }
+}
+
+class MovimientoTelaEditPayload {
+  final String codigoTela;
+  final String opPrefijo;
+  final String opNumero;
+  final String articulo;
+  final String metroCorte;
+  final String ancho;
+  final String peso;
+  final String cc;
+  final String cd;
+  final String fechaCorte;
+  final String fallaPrincipal;
+  final List<String> fallasSecundarias;
+
+  const MovimientoTelaEditPayload({
+    required this.codigoTela,
+    required this.opPrefijo,
+    required this.opNumero,
+    required this.articulo,
+    required this.metroCorte,
+    required this.ancho,
+    required this.peso,
+    required this.cc,
+    required this.cd,
+    required this.fechaCorte,
+    required this.fallaPrincipal,
+    required this.fallasSecundarias,
+  });
+}
+
+class MovimientoTelaRendimientoData {
+  final String estado;
+  final String message;
+  final String rendimiento;
+  final String min;
+  final String max;
+
+  const MovimientoTelaRendimientoData({
+    required this.estado,
+    required this.message,
+    required this.rendimiento,
+    required this.min,
+    required this.max,
+  });
+
+  factory MovimientoTelaRendimientoData.fromMap(Map<String, dynamic> map) {
+    final estado = (map['estado'] ?? 'SIN_DATOS').toString().trim();
+    final rendimiento = (map['rendimiento'] ?? '').toString().trim();
+    final min = (map['min'] ?? '').toString().trim();
+    final max = (map['max'] ?? '').toString().trim();
+    final message =
+        estado == 'FUERA'
+            ? 'Rendimiento fuera de rango: $rendimiento. Esperado $min a $max.'
+            : estado == 'DENTRO'
+            ? 'Rendimiento dentro de rango: $rendimiento.'
+            : 'Sin historial suficiente para validar rendimiento.';
+
+    return MovimientoTelaRendimientoData(
+      estado: estado,
+      message: message,
+      rendimiento: rendimiento,
+      min: min,
+      max: max,
+    );
+  }
 }
 
 class MovimientoTelasRemoteDatasource {
@@ -109,6 +287,94 @@ class MovimientoTelasRemoteDatasource {
       articulos: articulos,
       codigosFalla: fallas,
     );
+  }
+
+  Future<MovimientoTelaCodigoData> reservarSiguienteCodigo({
+    required String numTelar,
+    required String fechaCodigo,
+  }) async {
+    final endpoint =
+        '${ApiRoutes.siguienteCorrelativoTela}'
+        '?telar=${Uri.encodeQueryComponent(numTelar.trim())}'
+        '&fecha=${Uri.encodeQueryComponent(fechaCodigo.trim())}';
+    final response = await _apiClient.get(endpoint);
+
+    if (!response.success) {
+      throw Exception(
+        response.message ?? 'No se pudo reservar correlativo de tela',
+      );
+    }
+
+    final map = _toMap(response.data);
+    final message = (map['message'] ?? '').toString().trim().toLowerCase();
+    if (message == 'error') {
+      throw Exception(
+        (map['error'] ?? 'No se pudo reservar correlativo de tela').toString(),
+      );
+    }
+
+    return MovimientoTelaCodigoData.fromMap(map);
+  }
+
+  Future<MovimientoTelaEdicionData> buscarTelaCruda(String codigoTela) async {
+    final response = await _apiClient.post(
+      ApiRoutes.busquedaTelaCruda,
+      data: {'codigo_tela': codigoTela.trim()},
+    );
+
+    if (!response.success) {
+      throw Exception(response.message ?? 'No se encontro la tela cruda');
+    }
+
+    return MovimientoTelaEdicionData.fromDynamic(response.data);
+  }
+
+  Future<String> editarTelaCruda(MovimientoTelaEditPayload payload) async {
+    final response = await _apiClient.post(
+      ApiRoutes.editarTelaCruda,
+      data: {
+        'codigotela': payload.codigoTela.trim(),
+        'articulo': payload.articulo.trim().toUpperCase(),
+        'metro_corte': payload.metroCorte.trim(),
+        'ancho': payload.ancho.trim(),
+        'peso': payload.peso.trim(),
+        'c_c': payload.cc.trim(),
+        'c_d': payload.cd.trim(),
+        'fecha_corte': payload.fechaCorte.trim(),
+        'cod_falla_principal': payload.fallaPrincipal.trim(),
+        'op': '${payload.opPrefijo.trim()}${payload.opNumero.trim()}',
+        'Observacion': _buildObservaciones(payload.fallasSecundarias),
+      },
+    );
+
+    if (!response.success) {
+      throw Exception(response.message ?? 'No se pudo editar la tela cruda');
+    }
+
+    final map = _toMap(response.data);
+    final message = (map['message'] ?? response.responseMessage).toString();
+    return message.trim().isNotEmpty
+        ? message.trim()
+        : 'Datos actualizados correctamente.';
+  }
+
+  Future<MovimientoTelaRendimientoData> validarRendimiento({
+    required String articulo,
+    required String mts,
+    required String peso,
+  }) async {
+    final endpoint =
+        '${ApiRoutes.validarRendimientoTela}'
+        '?articulo=${Uri.encodeQueryComponent(articulo.trim())}'
+        '&mts=${Uri.encodeQueryComponent(mts.trim())}'
+        '&peso=${Uri.encodeQueryComponent(peso.trim())}';
+    final response = await _apiClient.get(endpoint);
+
+    if (!response.success) {
+      throw Exception(response.message ?? 'No se pudo validar rendimiento');
+    }
+
+    return MovimientoTelaRendimientoData.fromMap(_toMap(response.data));
   }
 
   Future<String> enviarCorte(MovimientoTelaCortePayload payload) async {
