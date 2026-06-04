@@ -60,6 +60,7 @@ class _TelaresScreenState extends ConsumerState<TelaresScreen>
     final hasPrecarga =
         _field(state, 'codigo_urdido').isNotEmpty ||
         _field(state, 'articulo_urdido').isNotEmpty;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     ref.listen<TelaresState>(telaresProvider, (previous, next) {
       if (!mounted) return;
@@ -78,62 +79,66 @@ class _TelaresScreenState extends ConsumerState<TelaresScreen>
               opacity: _fadeAnimation,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                child: Column(
-                  children: [
-                    _buildHeader(context),
-                    const SizedBox(height: 10),
-                    _buildStatusBanner(state),
-                    const SizedBox(height: 10),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Form(
-                          key: _formKey,
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          child: Column(
-                            children: [
-                              _buildFlowGuide(state),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  ),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.only(bottom: 18 + bottomInset),
+                  child: Column(
+                    children: [
+                      _buildHeader(context),
+                      const SizedBox(height: 10),
+                      _buildStatusBanner(state),
+                      const SizedBox(height: 10),
+                      Form(
+                        key: _formKey,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        child: Column(
+                          children: [
+                            _buildFlowGuide(state),
+                            const SizedBox(height: 10),
+                            _buildScanCard(state, notifier),
+                            const SizedBox(height: 10),
+                            if (hasPrecarga) ...[
+                              _buildSmartAlerts(state),
                               const SizedBox(height: 10),
-                              _buildScanCard(state, notifier),
+                              _buildResumenCard(),
                               const SizedBox(height: 10),
-                              if (hasPrecarga) ...[
-                                _buildSmartAlerts(state),
-                                const SizedBox(height: 10),
-                                _buildResumenCard(),
-                                const SizedBox(height: 10),
-                                _buildRegistroCard(state, notifier),
-                                const SizedBox(height: 10),
-                              ] else ...[
-                                _buildLockedHint(
-                                  hasCodigo
-                                      ? 'Presione "Buscar datos" para habilitar el registro de calidad.'
-                                      : 'Escanee o ingrese codigo PCP para iniciar.',
-                                ),
-                                const SizedBox(height: 10),
-                              ],
-                              _buildQueueCard(state, notifier),
-                              const SizedBox(height: 12),
-                              if (hasPrecarga)
-                                _buildActionButtons(
-                                  state: state,
-                                  usuario: usuario,
-                                  onEnviar: () async {
-                                    final confirmed = await _confirmarRegistro(
-                                      state: state,
-                                      usuario: usuario,
-                                    );
-                                    if (!confirmed) return;
-                                    await notifier.enviarRegistro(
-                                      usuario: usuario,
-                                    );
-                                  },
-                                  onLimpiar: () => _limpiar(notifier),
-                                ),
+                              _buildRegistroCard(state, notifier),
+                              const SizedBox(height: 10),
+                            ] else ...[
+                              _buildLockedHint(
+                                hasCodigo
+                                    ? 'Presione "Buscar datos" para habilitar el registro de calidad.'
+                                    : 'Escanee o ingrese codigo PCP para iniciar.',
+                              ),
+                              const SizedBox(height: 10),
                             ],
-                          ),
+                            _buildQueueCard(state, notifier),
+                            const SizedBox(height: 12),
+                            if (hasPrecarga)
+                              _buildActionButtons(
+                                state: state,
+                                usuario: usuario,
+                                onEnviar: () async {
+                                  final confirmed = await _confirmarRegistro(
+                                    state: state,
+                                    usuario: usuario,
+                                  );
+                                  if (!confirmed) return;
+                                  await notifier.enviarRegistro(
+                                    usuario: usuario,
+                                  );
+                                },
+                                onLimpiar: () => _limpiar(notifier),
+                              ),
+                          ],
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

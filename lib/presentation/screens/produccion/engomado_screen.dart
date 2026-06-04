@@ -61,6 +61,7 @@ class _EngomadoScreenState extends ConsumerState<EngomadoScreen>
     final hasLink =
         state.urdidoSnapshot.isNotEmpty ||
         _field(state, 'codigo_urdido').isNotEmpty;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     ref.listen<EngomadoState>(engomadoProvider, (previous, next) {
       if (!mounted) return;
@@ -79,74 +80,78 @@ class _EngomadoScreenState extends ConsumerState<EngomadoScreen>
               opacity: _fadeAnimation,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                child: Column(
-                  children: [
-                    _buildHeader(context),
-                    const SizedBox(height: 10),
-                    _buildStatusBanner(state),
-                    const SizedBox(height: 10),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Form(
-                          key: _formKey,
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          child: Column(
-                            children: [
-                              _buildFlowGuide(state, proceso),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  ),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.only(bottom: 18 + bottomInset),
+                  child: Column(
+                    children: [
+                      _buildHeader(context),
+                      const SizedBox(height: 10),
+                      _buildStatusBanner(state),
+                      const SizedBox(height: 10),
+                      Form(
+                        key: _formKey,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        child: Column(
+                          children: [
+                            _buildFlowGuide(state, proceso),
+                            const SizedBox(height: 10),
+                            _buildScanCard(state, notifier),
+                            const SizedBox(height: 10),
+                            if (hasLink) ...[
+                              _buildSnapshotCard(state),
                               const SizedBox(height: 10),
-                              _buildScanCard(state, notifier),
+                              _buildSmartAlerts(state, proceso),
                               const SizedBox(height: 10),
-                              if (hasLink) ...[
-                                _buildSnapshotCard(state),
-                                const SizedBox(height: 10),
-                                _buildSmartAlerts(state, proceso),
-                                const SizedBox(height: 10),
-                                _buildMainFormCard(
-                                  state: state,
-                                  notifier: notifier,
-                                  usuario: usuario,
-                                  proceso:
-                                      proceso.isEmpty
-                                          ? AppConstants.procesoEngomado
-                                          : proceso,
-                                ),
-                                const SizedBox(height: 10),
-                              ] else ...[
-                                _buildLockedHint(
-                                  hasCodigo
-                                      ? 'Presione "Buscar urdido" para vincular la referencia y habilitar el proceso.'
-                                      : 'Escanee o ingrese PCP para iniciar engomado.',
-                                ),
-                                const SizedBox(height: 10),
-                              ],
-                              _buildQueueCard(state, notifier),
-                              const SizedBox(height: 12),
-                              if (hasLink)
-                                _buildActionButtons(
-                                  state: state,
-                                  usuario: usuario,
-                                  onEnviar: () async {
-                                    final confirmed = await _confirmarRegistro(
-                                      state: state,
-                                      usuario: usuario,
-                                      proceso:
-                                          proceso.isEmpty
-                                              ? AppConstants.procesoEngomado
-                                              : proceso,
-                                    );
-                                    if (!confirmed) return;
-                                    await notifier.enviarEngomado(
-                                      usuario: usuario,
-                                    );
-                                  },
-                                  onLimpiar: () => _limpiar(notifier),
-                                ),
+                              _buildMainFormCard(
+                                state: state,
+                                notifier: notifier,
+                                usuario: usuario,
+                                proceso:
+                                    proceso.isEmpty
+                                        ? AppConstants.procesoEngomado
+                                        : proceso,
+                              ),
+                              const SizedBox(height: 10),
+                            ] else ...[
+                              _buildLockedHint(
+                                hasCodigo
+                                    ? 'Presione "Buscar urdido" para vincular la referencia y habilitar el proceso.'
+                                    : 'Escanee o ingrese PCP para iniciar engomado.',
+                              ),
+                              const SizedBox(height: 10),
                             ],
-                          ),
+                            _buildQueueCard(state, notifier),
+                            const SizedBox(height: 12),
+                            if (hasLink)
+                              _buildActionButtons(
+                                state: state,
+                                usuario: usuario,
+                                onEnviar: () async {
+                                  final confirmed = await _confirmarRegistro(
+                                    state: state,
+                                    usuario: usuario,
+                                    proceso:
+                                        proceso.isEmpty
+                                            ? AppConstants.procesoEngomado
+                                            : proceso,
+                                  );
+                                  if (!confirmed) return;
+                                  await notifier.enviarEngomado(
+                                    usuario: usuario,
+                                  );
+                                },
+                                onLimpiar: () => _limpiar(notifier),
+                              ),
+                          ],
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

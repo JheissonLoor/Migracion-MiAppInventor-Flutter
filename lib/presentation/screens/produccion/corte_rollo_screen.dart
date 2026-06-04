@@ -58,6 +58,7 @@ class _CorteRolloScreenState extends ConsumerState<CorteRolloScreen>
     final state = ref.watch(corteRolloProvider);
     final notifier = ref.read(corteRolloProvider.notifier);
     final usuario = ref.watch(authProvider).user?.usuario ?? '';
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     ref.listen<CorteRolloState>(corteRolloProvider, (previous, next) {
       if (mounted && previous?.fields != next.fields) {
@@ -76,51 +77,47 @@ class _CorteRolloScreenState extends ConsumerState<CorteRolloScreen>
                 position: _slideAnimation,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-                  child: Column(
-                    children: [
-                      _header(context),
-                      if (_hasBanner(state)) ...[
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
+                    ),
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: EdgeInsets.only(bottom: 18 + bottomInset),
+                    child: Column(
+                      children: [
+                        _header(context),
+                        if (_hasBanner(state)) ...[
+                          const SizedBox(height: 10),
+                          _statusBanner(state),
+                        ],
                         const SizedBox(height: 10),
-                        _statusBanner(state),
-                      ],
-                      const SizedBox(height: 10),
-                      _buildFlowGuide(state),
-                      const SizedBox(height: 10),
-                      _buildSmartAlerts(state),
-                      const SizedBox(height: 10),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          child: Column(
-                            children: [
-                              _corteCard(state, notifier, usuario),
-                              if (state.corteResult != null) ...[
-                                const SizedBox(height: 10),
-                                _resultCard(state.corteResult!),
-                              ],
-                              const SizedBox(height: 10),
-                              _trazabilidadCard(state, notifier),
-                              if (state.trazabilidad != null) ...[
-                                const SizedBox(height: 10),
-                                _trazabilidadResult(state.trazabilidad!),
-                              ],
-                              const SizedBox(height: 10),
-                              SizedBox(
-                                width: double.infinity,
-                                child: OutlinedButton.icon(
-                                  onPressed:
-                                      state.isBusy ? null : notifier.limpiar,
-                                  icon: const Icon(
-                                    Icons.cleaning_services_rounded,
-                                  ),
-                                  label: const Text('Limpiar pantalla'),
-                                ),
-                              ),
-                            ],
+                        _buildFlowGuide(state),
+                        const SizedBox(height: 10),
+                        _buildSmartAlerts(state),
+                        const SizedBox(height: 10),
+                        _corteCard(state, notifier, usuario),
+                        if (state.corteResult != null) ...[
+                          const SizedBox(height: 10),
+                          _resultCard(state.corteResult!),
+                        ],
+                        const SizedBox(height: 10),
+                        _trazabilidadCard(state, notifier),
+                        if (state.trazabilidad != null) ...[
+                          const SizedBox(height: 10),
+                          _trazabilidadResult(state.trazabilidad!),
+                        ],
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: state.isBusy ? null : notifier.limpiar,
+                            icon: const Icon(Icons.cleaning_services_rounded),
+                            label: const Text('Limpiar pantalla'),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

@@ -114,6 +114,7 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     final isTablet = viewportWidth >= 980;
     final horizontalPadding = isTablet ? 22.0 : 14.0;
     final user = auth.user?.usuario.trim() ?? '';
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     if (_nombre.text.trim().isEmpty && user.isNotEmpty) {
       _nombre.text = user;
     }
@@ -143,61 +144,61 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
                   horizontalPadding,
                   16,
                 ),
-                child: Column(
-                  children: [
-                    _header(context),
-                    if ((state.errorMessage ?? '').isNotEmpty ||
-                        (state.message ?? '').isNotEmpty) ...[
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  ),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.only(bottom: 18 + bottomInset),
+                  child: Column(
+                    children: [
+                      _header(context),
+                      if ((state.errorMessage ?? '').isNotEmpty ||
+                          (state.message ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        _banner(state),
+                      ],
                       const SizedBox(height: 10),
-                      _banner(state),
+                      _buildFlowGuide(state),
+                      const SizedBox(height: 10),
+                      _buildSmartAlerts(state),
+                      const SizedBox(height: 10),
+                      _modeSelector(state, notifier),
+                      if (_mode == _IngresoTelasMode.editar) ...[
+                        const SizedBox(height: 10),
+                        _editSearchCard(state, notifier),
+                      ],
+                      if (_mode != _IngresoTelasMode.none) ...[
+                        const SizedBox(height: 10),
+                        if (isTablet && _mode == _IngresoTelasMode.nuevo)
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                flex: 5,
+                                child: _formCard(state, notifier),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 3,
+                                child: _qrCard(state, notifier),
+                              ),
+                            ],
+                          )
+                        else
+                          Column(
+                            children: [
+                              _formCard(state, notifier),
+                              if (_mode == _IngresoTelasMode.nuevo) ...[
+                                const SizedBox(height: 10),
+                                _qrCard(state, notifier),
+                              ],
+                            ],
+                          ),
+                      ],
                     ],
-                    const SizedBox(height: 10),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          children: [
-                            _buildFlowGuide(state),
-                            const SizedBox(height: 10),
-                            _buildSmartAlerts(state),
-                            const SizedBox(height: 10),
-                            _modeSelector(state, notifier),
-                            if (_mode == _IngresoTelasMode.editar) ...[
-                              const SizedBox(height: 10),
-                              _editSearchCard(state, notifier),
-                            ],
-                            if (_mode != _IngresoTelasMode.none) ...[
-                              const SizedBox(height: 10),
-                              if (isTablet && _mode == _IngresoTelasMode.nuevo)
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      flex: 5,
-                                      child: _formCard(state, notifier),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      flex: 3,
-                                      child: _qrCard(state, notifier),
-                                    ),
-                                  ],
-                                )
-                              else
-                                Column(
-                                  children: [
-                                    _formCard(state, notifier),
-                                    if (_mode == _IngresoTelasMode.nuevo) ...[
-                                      const SizedBox(height: 10),
-                                      _qrCard(state, notifier),
-                                    ],
-                                  ],
-                                ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),

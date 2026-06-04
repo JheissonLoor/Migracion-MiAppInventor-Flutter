@@ -57,6 +57,7 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
     final usuario = ref.watch(authProvider).user?.usuario ?? 'OPERARIO';
     final hasCodigo = _field(state, 'codigo_pcp').isNotEmpty;
     final hasPrecarga = _field(state, 'codigo_urdido').isNotEmpty;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     ref.listen<UrdidoState>(urdidoProvider, (previous, next) {
       if (!mounted) return;
@@ -75,60 +76,62 @@ class _UrdidoScreenState extends ConsumerState<UrdidoScreen>
               opacity: _fadeAnimation,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                child: Column(
-                  children: [
-                    _buildHeader(context),
-                    const SizedBox(height: 10),
-                    _buildStatusBanner(state),
-                    const SizedBox(height: 10),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Form(
-                          key: _formKey,
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          child: Column(
-                            children: [
-                              _buildFlowGuide(state),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  ),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.only(bottom: 18 + bottomInset),
+                  child: Column(
+                    children: [
+                      _buildHeader(context),
+                      const SizedBox(height: 10),
+                      _buildStatusBanner(state),
+                      const SizedBox(height: 10),
+                      Form(
+                        key: _formKey,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        child: Column(
+                          children: [
+                            _buildFlowGuide(state),
+                            const SizedBox(height: 10),
+                            _buildScanCard(state, notifier),
+                            const SizedBox(height: 10),
+                            if (hasPrecarga) ...[
+                              _buildSmartAlerts(state),
                               const SizedBox(height: 10),
-                              _buildScanCard(state, notifier),
+                              _buildMainFormCard(state, notifier, usuario),
                               const SizedBox(height: 10),
-                              if (hasPrecarga) ...[
-                                _buildSmartAlerts(state),
-                                const SizedBox(height: 10),
-                                _buildMainFormCard(state, notifier, usuario),
-                                const SizedBox(height: 10),
-                              ] else ...[
-                                _buildLockedHint(
-                                  hasCodigo
-                                      ? 'Presione "Precargar datos" para habilitar el formulario de urdido.'
-                                      : 'Escanee o ingrese el codigo PCP para iniciar el registro.',
-                                ),
-                                const SizedBox(height: 10),
-                              ],
-                              _buildQueueCard(state, notifier),
-                              const SizedBox(height: 12),
-                              if (hasPrecarga)
-                                _buildActionButtons(
-                                  state: state,
-                                  usuario: usuario,
-                                  onEnviar: () async {
-                                    final confirmed = await _confirmarRegistro(
-                                      state: state,
-                                      usuario: usuario,
-                                    );
-                                    if (!confirmed) return;
-                                    await notifier.enviarUrdido(
-                                      usuario: usuario,
-                                    );
-                                  },
-                                  onLimpiar: () => _limpiar(notifier),
-                                ),
+                            ] else ...[
+                              _buildLockedHint(
+                                hasCodigo
+                                    ? 'Presione "Precargar datos" para habilitar el formulario de urdido.'
+                                    : 'Escanee o ingrese el codigo PCP para iniciar el registro.',
+                              ),
+                              const SizedBox(height: 10),
                             ],
-                          ),
+                            _buildQueueCard(state, notifier),
+                            const SizedBox(height: 12),
+                            if (hasPrecarga)
+                              _buildActionButtons(
+                                state: state,
+                                usuario: usuario,
+                                onEnviar: () async {
+                                  final confirmed = await _confirmarRegistro(
+                                    state: state,
+                                    usuario: usuario,
+                                  );
+                                  if (!confirmed) return;
+                                  await notifier.enviarUrdido(usuario: usuario);
+                                },
+                                onLimpiar: () => _limpiar(notifier),
+                              ),
+                          ],
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
