@@ -149,7 +149,7 @@ class _LocalApiSettingsScreenState extends ConsumerState<LocalApiSettingsScreen>
           ),
           const SizedBox(height: 6),
           const Text(
-            'Formato recomendado: http://192.168.1.34:5001',
+            'Formato recomendado: http://192.168.1.50:5001',
             style: TextStyle(color: CorporateTokens.slate500, fontSize: 12),
           ),
           const SizedBox(height: 14),
@@ -157,7 +157,7 @@ class _LocalApiSettingsScreenState extends ConsumerState<LocalApiSettingsScreen>
             controller: _impresionController,
             decoration: const InputDecoration(
               labelText: 'API impresion local',
-              hintText: 'http://192.168.1.34:5001',
+              hintText: 'http://192.168.1.50:5001',
               prefixIcon: Icon(Icons.print_rounded),
             ),
             keyboardType: TextInputType.url,
@@ -359,7 +359,7 @@ class _LocalApiSettingsScreenState extends ConsumerState<LocalApiSettingsScreen>
     if (impresionUrl == null) {
       setState(() {
         _errorMessage =
-            'URL de impresion invalida. Ejemplo: http://192.168.1.34:5001';
+            'URL de impresion invalida. Ejemplo: http://192.168.1.50:5001';
         _infoMessage = null;
       });
       return;

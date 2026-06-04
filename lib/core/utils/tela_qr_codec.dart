@@ -32,9 +32,28 @@ class TelaQrCodec {
     final op = _sanitizeField(t.op);
     final telar = _sanitizeField(t.telar);
     final numCorte = _sanitizeField(t.numCorte);
+    final codigoTela = _completeCodigoRollo(
+      codigo: t.codigoTela,
+      numCorte: numCorte,
+    );
+    if (isCodigoRolloIncompleto(codigoTela)) {
+      throw Exception(
+        'El QR tiene codigo de tela incompleto. Falta el correlativo final.',
+      );
+    }
+    final parsed = QrTelaCruda(
+      codigoTela: codigoTela,
+      numCorte: t.numCorte,
+      telar: t.telar,
+      op: t.op,
+      articulo: t.articulo,
+      metraje: t.metraje,
+      peso: t.peso,
+      revisador: t.revisador,
+    );
 
     final qr = [
-      t.codigoTela.trim(),
+      codigoTela,
       numCorte,
       telar,
       op,
@@ -44,7 +63,7 @@ class TelaQrCodec {
       revisador,
     ].join(',');
 
-    return TelaQrNormalized(parsed: t, codigoQrNormalizado: qr);
+    return TelaQrNormalized(parsed: parsed, codigoQrNormalizado: qr);
   }
 
   /// Extrae codigo de rollo desde texto libre o QR completo.
@@ -57,11 +76,35 @@ class TelaQrCodec {
 
     final parsed = QrParser.parse(raw);
     if (parsed.telaCruda != null) {
-      return parsed.telaCruda!.codigoTela.trim();
+      return _completeCodigoRollo(
+        codigo: parsed.telaCruda!.codigoTela,
+        numCorte: parsed.telaCruda!.numCorte,
+      );
     }
 
     // Fallback defensivo: primer token antes de coma.
     return raw.split(',').first.trim();
+  }
+
+  /// Detecta el bug legacy donde el QR trae solo la base:
+  /// T20F040626-1- en vez de T20F040626-1-12.
+  static bool isCodigoRolloIncompleto(String codigo) {
+    return RegExp(
+      r'^T\d+F\d{6}-1-$',
+      caseSensitive: false,
+    ).hasMatch(codigo.trim());
+  }
+
+  static String _completeCodigoRollo({
+    required String codigo,
+    required String numCorte,
+  }) {
+    final cleanCodigo = codigo.trim();
+    final cleanCorte = numCorte.trim();
+    if (!isCodigoRolloIncompleto(cleanCodigo) || cleanCorte.isEmpty) {
+      return cleanCodigo;
+    }
+    return '$cleanCodigo$cleanCorte';
   }
 
   static String _sanitizeField(String value) {

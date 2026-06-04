@@ -27,5 +27,24 @@ void main() {
       final code = TelaQrCodec.extractCodigoRollo(raw);
       expect(code, 'T1C150126-01');
     });
+
+    test('completa codigo nuevo cuando QR trae base y numCorte separado', () {
+      const raw = 'T20F040626-1-,12,20,OPV82,ACRILICO GEORG.1027,5,8,Admin';
+
+      final normalized = TelaQrCodec.normalizeForIngreso(raw);
+      final code = TelaQrCodec.extractCodigoRollo(raw);
+
+      expect(normalized.parsed.codigoTela, 'T20F040626-1-12');
+      expect(
+        normalized.codigoQrNormalizado,
+        'T20F040626-1-12,12,20,OPV82,ACRILICO GEORG.1027,5,8,Admin',
+      );
+      expect(code, 'T20F040626-1-12');
+    });
+
+    test('detecta codigo nuevo incompleto sin correlativo final', () {
+      expect(TelaQrCodec.isCodigoRolloIncompleto('T20F040626-1-'), isTrue);
+      expect(TelaQrCodec.isCodigoRolloIncompleto('T20F040626-1-12'), isFalse);
+    });
   });
 }

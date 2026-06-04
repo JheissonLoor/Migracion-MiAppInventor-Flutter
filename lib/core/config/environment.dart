@@ -31,8 +31,9 @@ class EnvironmentConfig {
   // ════════════════════════════════════════════
   // Esta IP es FIJA en la red local de la planta.
   // Solo accesible desde la red WiFi de CoolImport.
-  static const String localApiUrl = 'http://192.168.1.34:5001';
+  static const String localApiUrl = 'http://192.168.1.50:5001';
   static const List<String> localApiFallbackUrls = [
+    'http://192.168.1.50:5001',
     'http://192.168.1.34:5001',
     'http://192.168.1.250:5001',
   ];

@@ -1,10 +1,10 @@
-﻿param(
+param(
   [switch]$SkipClean,
   [switch]$SkipTests,
   [switch]$SkipApiChecks,
   [switch]$BuildApk,
   [string]$BackendUrl = 'https://coolimport.pythonanywhere.com',
-  [string]$LocalApiUrl = 'http://192.168.1.34:5001',
+  [string]$LocalApiUrl = 'http://192.168.1.50:5001',
   [string]$ReportPath = 'docs/reports/preflight_latest.md'
 )
 

@@ -278,6 +278,14 @@ class GestionStockTelasNotifier extends StateNotifier<GestionStockTelasState> {
       );
       return;
     }
+    if (TelaQrCodec.isCodigoRolloIncompleto(codigo)) {
+      state = state.copyWith(
+        status: GestionStatus.error,
+        errorMessage:
+            'El codigo de tela esta incompleto. Falta el correlativo final.',
+      );
+      return;
+    }
 
     final exists = state.carrito.any((item) => item.codigo == codigo);
     if (exists) {

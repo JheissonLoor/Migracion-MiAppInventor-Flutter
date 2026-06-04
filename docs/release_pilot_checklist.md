@@ -1,4 +1,4 @@
-﻿# Checklist de salida a planta - Flutter PCP
+# Checklist de salida a planta - Flutter PCP
 
 Actualizado: 2026-04-30
 
@@ -13,7 +13,7 @@ Referencia operativa detallada: `docs/pilot_runbook.md`
 - [ ] Build `app-debug.apk` generado y firmado para entorno piloto.
 - [ ] API principal accesible desde tablet (`/inicio_sesion`, `/consulta_pcp`).
 - [ ] API principal valida `/consulta_historial_telacruda` y `/generar_kardex`.
-- [ ] API local accesible en red de planta (`192.168.1.34:5001/health`).
+- [ ] API local accesible en red de planta (`192.168.1.50:5001/health`).
 - [ ] Credencial Google Sheets validada para `Agregar proveedor` (sin exponer secreto en APK release).
 
 ### Credenciales Google Sheets (release)
