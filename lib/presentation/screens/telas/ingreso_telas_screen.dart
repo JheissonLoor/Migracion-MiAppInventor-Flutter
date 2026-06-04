@@ -415,9 +415,6 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
     final isBusy = state.isBusy;
     final corteReady = _isCorteReady();
     final isEditMode = _mode == _IngresoTelasMode.editar;
-    final fallaActual = _fallaPrincipal.text.trim();
-    final fallaCatalogoValue =
-        state.codigosFalla.contains(fallaActual) ? fallaActual : null;
 
     return _card(
       isEditMode ? 'Datos del corte a editar' : 'Datos del corte nuevo',
@@ -738,7 +735,6 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
                     _fallaField(
                       controller: _fallaPrincipal,
                       label: 'Falla principal',
-                      value: fallaCatalogoValue,
                       codigos: state.codigosFalla,
                       enabled: !isBusy,
                       requiredField: true,
@@ -760,10 +756,6 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
                       _fallaField(
                         controller: _fallas[index],
                         label: 'Falla secundaria ${index + 1}',
-                        value:
-                            state.codigosFalla.contains(_fallas[index].text)
-                                ? _fallas[index].text
-                                : null,
                         codigos: state.codigosFalla,
                         enabled: !isBusy,
                       ),
@@ -1160,7 +1152,6 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
   Widget _fallaField({
     required TextEditingController controller,
     required String label,
-    required String? value,
     required List<String> codigos,
     required bool enabled,
     bool requiredField = false,
@@ -1176,29 +1167,82 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
       );
     }
 
-    return DropdownButtonFormField<String>(
-      value: value,
-      onChanged:
+    final selected = controller.text.trim();
+    return TextFormField(
+      controller: controller,
+      readOnly: true,
+      enabled: enabled,
+      onTap:
           enabled
-              ? (selected) => setState(() => controller.text = selected ?? '')
+              ? () => _showFallaPicker(
+                controller: controller,
+                label: label,
+                codigos: codigos,
+                requiredField: requiredField,
+              )
               : null,
       decoration: _decoration(
         requiredField ? '$label *' : label,
         requiredField
             ? Icons.warning_amber_rounded
             : Icons.playlist_add_check_rounded,
+      ).copyWith(
+        hintText: requiredField ? 'Seleccione falla' : 'Sin falla',
+        helperText: 'Toque para buscar en ${codigos.length} fallas',
+        suffixIcon: IconButton(
+          tooltip:
+              selected.isNotEmpty && !requiredField
+                  ? 'Quitar falla'
+                  : 'Buscar falla',
+          onPressed:
+              !enabled
+                  ? null
+                  : () {
+                    if (selected.isNotEmpty && !requiredField) {
+                      setState(controller.clear);
+                      return;
+                    }
+                    _showFallaPicker(
+                      controller: controller,
+                      label: label,
+                      codigos: codigos,
+                      requiredField: requiredField,
+                    );
+                  },
+          icon: Icon(
+            selected.isNotEmpty && !requiredField
+                ? Icons.close_rounded
+                : Icons.manage_search_rounded,
+          ),
+        ),
       ),
-      isExpanded: true,
-      items: [
-        DropdownMenuItem<String>(
-          value: '',
-          child: Text(requiredField ? 'Seleccione falla' : 'Sin falla'),
-        ),
-        ...codigos.map(
-          (item) => DropdownMenuItem(value: item, child: Text(item)),
-        ),
-      ],
+      style: const TextStyle(
+        color: CorporateTokens.navy900,
+        fontWeight: FontWeight.w700,
+      ),
     );
+  }
+
+  Future<void> _showFallaPicker({
+    required TextEditingController controller,
+    required String label,
+    required List<String> codigos,
+    required bool requiredField,
+  }) async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder:
+          (context) => _FallaPickerSheet(
+            title: label,
+            codigos: codigos,
+            currentValue: controller.text,
+            allowClear: !requiredField,
+          ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() => controller.text = selected);
   }
 
   Widget _card(String title, Widget child) {
@@ -1941,5 +1985,221 @@ class _IngresoTelasScreenState extends ConsumerState<IngresoTelasScreen>
       return null;
     }
     return DateTime(yy, mm, dd);
+  }
+}
+
+class _FallaPickerSheet extends StatefulWidget {
+  final String title;
+  final List<String> codigos;
+  final String currentValue;
+  final bool allowClear;
+
+  const _FallaPickerSheet({
+    required this.title,
+    required this.codigos,
+    required this.currentValue,
+    required this.allowClear,
+  });
+
+  @override
+  State<_FallaPickerSheet> createState() => _FallaPickerSheetState();
+}
+
+class _FallaPickerSheetState extends State<_FallaPickerSheet> {
+  final _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _filteredCodigos();
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.78,
+      minChildSize: 0.48,
+      maxChildSize: 0.94,
+      builder: (context, scrollController) {
+        return AnimatedPadding(
+          duration: CorporateTokens.motionFast,
+          curve: Curves.easeOutCubic,
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  width: 46,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: CorporateTokens.slate300,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 10),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: CorporateTokens.primaryButtonGradient,
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(
+                          Icons.manage_search_rounded,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.title,
+                              style: const TextStyle(
+                                color: CorporateTokens.navy900,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            Text(
+                              '${widget.codigos.length} codigos disponibles',
+                              style: const TextStyle(
+                                color: CorporateTokens.slate500,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: TextField(
+                    controller: _search,
+                    autofocus: true,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar por codigo o descripcion',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: const BorderSide(
+                          color: CorporateTokens.borderSoft,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: const BorderSide(
+                          color: CorporateTokens.borderSoft,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                if (filtered.isEmpty)
+                  const Expanded(
+                    child: Center(
+                      child: Text(
+                        'No hay coincidencias',
+                        style: TextStyle(
+                          color: CorporateTokens.slate500,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: ListView.separated(
+                      controller: scrollController,
+                      padding: const EdgeInsets.fromLTRB(14, 0, 14, 18),
+                      itemCount: filtered.length + (widget.allowClear ? 1 : 0),
+                      separatorBuilder:
+                          (_, __) => const Divider(
+                            height: 1,
+                            color: CorporateTokens.borderSoft,
+                          ),
+                      itemBuilder: (context, index) {
+                        if (widget.allowClear && index == 0) {
+                          return ListTile(
+                            leading: const Icon(Icons.close_rounded),
+                            title: const Text('Sin falla'),
+                            subtitle: const Text('Limpiar esta seleccion'),
+                            onTap: () => Navigator.pop(context, ''),
+                          );
+                        }
+
+                        final item =
+                            filtered[index - (widget.allowClear ? 1 : 0)];
+                        final selected = item == widget.currentValue.trim();
+                        return ListTile(
+                          selected: selected,
+                          selectedTileColor: CorporateTokens.cobalt600
+                              .withValues(alpha: 0.08),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          leading: Icon(
+                            selected
+                                ? Icons.check_circle_rounded
+                                : Icons.radio_button_unchecked_rounded,
+                            color:
+                                selected
+                                    ? CorporateTokens.cobalt600
+                                    : CorporateTokens.slate500,
+                          ),
+                          title: Text(
+                            item,
+                            style: const TextStyle(
+                              color: CorporateTokens.navy900,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          onTap: () => Navigator.pop(context, item),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  List<String> _filteredCodigos() {
+    final query = _normalize(_search.text);
+    if (query.isEmpty) return widget.codigos;
+    return widget.codigos
+        .where((item) => _normalize(item).contains(query))
+        .toList(growable: false);
+  }
+
+  String _normalize(String value) {
+    return value.toLowerCase().trim();
   }
 }

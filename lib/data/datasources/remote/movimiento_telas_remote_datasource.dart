@@ -273,7 +273,7 @@ class MovimientoTelasRemoteDatasource {
       'articulos_lista',
     ]);
 
-    final fallas = _extractListByKeys(map, const [
+    var fallas = _extractListByKeys(map, const [
       'codigos_falla',
       'codigos_fallo',
       'codigo_falla',
@@ -282,11 +282,20 @@ class MovimientoTelasRemoteDatasource {
       'fallos',
       'codigos',
     ]);
+    if (fallas.isEmpty) {
+      fallas = await _obtenerCodigosFallaLegacy();
+    }
 
     return MovimientoTelasCatalogosData(
       articulos: articulos,
       codigosFalla: fallas,
     );
+  }
+
+  Future<List<String>> _obtenerCodigosFallaLegacy() async {
+    final response = await _apiClient.get(ApiRoutes.readDatosKardexColumn(15));
+    if (!response.success) return const <String>[];
+    return _cleanCodigosFalla(_normalizeStringList(response.responseData));
   }
 
   Future<MovimientoTelaCodigoData> reservarSiguienteCodigo({
@@ -517,6 +526,23 @@ class MovimientoTelasRemoteDatasource {
   List<String> _normalizeStringList(dynamic raw) {
     if (raw == null) return const <String>[];
 
+    if (raw is Map) {
+      final map = Map<String, dynamic>.from(raw);
+      for (final key in const [
+        'data',
+        'result',
+        'items',
+        'values',
+        'columnData',
+        'codigos_falla',
+        'fallas',
+      ]) {
+        final nested = _normalizeStringList(map[key]);
+        if (nested.isNotEmpty) return nested;
+      }
+      return const <String>[];
+    }
+
     if (raw is String) {
       return raw
           .split(',')
@@ -556,5 +582,30 @@ class MovimientoTelasRemoteDatasource {
     }
 
     return const <String>[];
+  }
+
+  List<String> _cleanCodigosFalla(List<String> raw) {
+    final unique = <String>{};
+    final ordered = <String>[];
+    for (final item in raw) {
+      final value = item.trim();
+      if (value.isEmpty || _isCodigoFallaHeader(value)) continue;
+      if (unique.add(value.toUpperCase())) {
+        ordered.add(value);
+      }
+    }
+    return ordered;
+  }
+
+  bool _isCodigoFallaHeader(String value) {
+    final normalized = value
+        .toLowerCase()
+        .replaceAll(' ', '')
+        .replaceAll('_', '')
+        .replaceAll('-', '');
+    return normalized == 'codfalla' ||
+        normalized == 'codigofalla' ||
+        normalized == 'codigodefalla' ||
+        normalized == 'fallas';
   }
 }

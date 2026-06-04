@@ -25,6 +25,8 @@ class ApiRoutes {
   static const String actualizarDatos = '/actualizar_datos';
   static const String verificarPcpPrefix = '/api/verificar_pcp';
   static const String obtenerDatosGenerales = '/obtener_datos_generales';
+  static String readDatosKardexColumn(int column) =>
+      '/read_column?sheet=datosKardex&column=$column';
   static const String urdidoScan = '/urdido_scan';
   static const String urdidoSend = '/urdido_send';
   static const String engomadoUrdidoSearch = '/engomado_urdido_search';
