@@ -59,6 +59,7 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
     final state = ref.watch(ingresoTelarProvider);
     final notifier = ref.read(ingresoTelarProvider.notifier);
     final usuario = ref.watch(authProvider).user?.usuario ?? '';
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     ref.listen<IngresoTelarState>(ingresoTelarProvider, (previous, next) {
       if (mounted && previous?.fields != next.fields) {
@@ -85,39 +86,38 @@ class _IngresoTelarScreenState extends ConsumerState<IngresoTelarScreen>
                 position: _slideAnimation,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-                  child: Column(
-                    children: [
-                      _header(context, state, notifier),
-                      const SizedBox(height: 10),
-                      _stateStrip(state),
-                      const SizedBox(height: 10),
-                      _buildFlowGuide(state),
-                      const SizedBox(height: 10),
-                      _buildSmartAlerts(state),
-                      if (_hasBanner(state)) ...[
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
+                    ),
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: EdgeInsets.only(bottom: 18 + bottomInset),
+                    child: Column(
+                      children: [
+                        _header(context, state, notifier),
                         const SizedBox(height: 10),
-                        _statusBanner(state),
+                        _stateStrip(state),
+                        const SizedBox(height: 10),
+                        _buildFlowGuide(state),
+                        const SizedBox(height: 10),
+                        _buildSmartAlerts(state),
+                        if (_hasBanner(state)) ...[
+                          const SizedBox(height: 10),
+                          _statusBanner(state),
+                        ],
+                        const SizedBox(height: 10),
+                        _datosTelar(state, notifier),
+                        const SizedBox(height: 10),
+                        _materialColor(state, notifier),
+                        const SizedBox(height: 10),
+                        _proceso(state, notifier),
+                        const SizedBox(height: 10),
+                        _trama(state, notifier),
+                        const SizedBox(height: 10),
+                        _acciones(state, notifier, usuario),
                       ],
-                      const SizedBox(height: 10),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          child: Column(
-                            children: [
-                              _datosTelar(state, notifier),
-                              const SizedBox(height: 10),
-                              _materialColor(state, notifier),
-                              const SizedBox(height: 10),
-                              _proceso(state, notifier),
-                              const SizedBox(height: 10),
-                              _trama(state, notifier),
-                              const SizedBox(height: 10),
-                              _acciones(state, notifier, usuario),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
