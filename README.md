@@ -295,6 +295,7 @@ Si eres reclutador tecnico o evaluador y tienes poco tiempo:
 ## Documentacion del proyecto
 
 - `docs/recruiter_case_study.md`: caso de estudio para portafolio y entrevistas.
+- `docs/coolimport_professional_profile.md`: perfil profesional ampliado, bullets de CV, prompts y LinkedIn.
 - `docs/migration_status.md`: estado funcional de la migracion.
 - `docs/mit_flutter_gap_audit_2026-04-28.md`: auditoria MIT vs Flutter.
 - `docs/release_pilot_checklist.md`: checklist para salida a planta.

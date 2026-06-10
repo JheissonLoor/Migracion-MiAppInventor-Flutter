@@ -10,6 +10,7 @@ El formato sigue una variante simple de Keep a Changelog y los commits usan mens
 
 - README redisenado como caso de estudio tecnico para portafolio.
 - Caso de estudio para reclutadores en `docs/recruiter_case_study.md`.
+- Perfil profesional ampliado del ecosistema CoolImport en `docs/coolimport_professional_profile.md`.
 - Guia de revision tecnica actualizada para evaluadores.
 
 ### Corregido
