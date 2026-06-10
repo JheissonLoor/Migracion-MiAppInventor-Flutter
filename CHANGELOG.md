@@ -8,7 +8,7 @@ El formato sigue una variante simple de Keep a Changelog y los commits usan mens
 
 ### Agregado
 
-- README redisenado como caso de estudio tecnico para portafolio.
+- README transformado en landing tecnica premium con diagramas Mermaid, flujo critico, mapa de arquitectura y ruta de revision.
 - Caso de estudio para reclutadores en `docs/recruiter_case_study.md`.
 - Perfil profesional ampliado del ecosistema CoolImport en `docs/coolimport_professional_profile.md`.
 - Guia de revision tecnica actualizada para evaluadores.
