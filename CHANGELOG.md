@@ -6,6 +6,17 @@ El formato sigue una variante simple de Keep a Changelog y los commits usan mens
 
 ## [Unreleased]
 
+### Agregado
+
+- README redisenado como caso de estudio tecnico para portafolio.
+- Caso de estudio para reclutadores en `docs/recruiter_case_study.md`.
+- Guia de revision tecnica actualizada para evaluadores.
+
+### Corregido
+
+- Gestion Stock Telas normaliza codigos QR nuevos incompletos (`T20F040626-1-`) cuando existe correlativo.
+- API local de impresion actualizada a la IP productiva reciente con fallback legado.
+
 ### Pendiente
 
 - Validar piloto final en tablets reales dentro de red de planta.
@@ -43,6 +54,6 @@ El formato sigue una variante simple de Keep a Changelog y los commits usan mens
 
 ### Validado
 
-- `flutter test`: 55 tests en verde.
+ - `flutter test`: 61 tests en verde.
 - `dart analyze`: sin errores.
 - CI remoto en GitHub Actions en verde.

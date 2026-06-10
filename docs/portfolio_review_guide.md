@@ -1,16 +1,17 @@
-﻿# Guia de revision para evaluadores tecnicos
+# Guia de revision para evaluadores tecnicos
 
 Este repositorio esta pensado como evidencia de una migracion real de sistema legacy a Flutter. Si estas revisando el proyecto por perfil tecnico, estas son las zonas mas relevantes.
 
 ## Revision rapida en 10 minutos
 
 1. Leer `README.md` para contexto de negocio y alcance.
-2. Revisar `lib/core/contracts/api_contracts.dart` para entender compatibilidad legacy.
-3. Revisar `lib/core/utils/` para parsers QR y tolerancia a datos reales.
-4. Revisar `lib/data/models/*queue*` para estrategia offline.
-5. Revisar `lib/presentation/screens/auth/login_screen.dart` y widgets de login para UI corporativa.
-6. Revisar `docs/mit_flutter_gap_audit_2026-04-28.md` para paridad MIT vs Flutter.
-7. Revisar tests en `test/core` y `test/data`.
+2. Leer `docs/recruiter_case_study.md` para entender decisiones e impacto.
+3. Revisar `lib/core/contracts/api_contracts.dart` para entender compatibilidad legacy.
+4. Revisar `lib/core/utils/` para parsers QR y tolerancia a datos reales.
+5. Revisar `lib/data/models/*queue*` para estrategia offline.
+6. Revisar `lib/presentation/screens/auth/login_screen.dart` y widgets de login para UI corporativa.
+7. Revisar `docs/mit_flutter_gap_audit_2026-04-28.md` para paridad MIT vs Flutter.
+8. Revisar tests en `test/core` y `test/data`.
 
 ## Que deberia observarse
 
@@ -38,7 +39,7 @@ dart analyze
 flutter test
 ```
 
-Tambien existe CI en GitHub Actions para validar cada push y pull request.
+Tambien existe CI en GitHub Actions para validar cada push y pull request. La suite actual mantiene 61 tests automatizados orientados a contratos legacy, parsers QR, modelos y bootstrap de app.
 
 ## Limites intencionales
 
