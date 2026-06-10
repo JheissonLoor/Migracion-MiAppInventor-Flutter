@@ -1,0 +1,96 @@
+﻿<svg width="1280" height="520" viewBox="0 0 1280 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">CoolImport PCP - Migracion industrial Flutter</title>
+  <desc id="desc">Banner tecnico del sistema CoolImport PCP, una migracion industrial de MIT App Inventor a Flutter Android.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#07111f"/>
+      <stop offset="0.48" stop-color="#0d2442"/>
+      <stop offset="1" stop-color="#092f3f"/>
+    </linearGradient>
+    <linearGradient id="cyan" x1="80" y1="80" x2="1180" y2="470" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="0.5" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#14b8a6"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#122641" stop-opacity="0.96"/>
+      <stop offset="1" stop-color="#071827" stop-opacity="0.94"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="18" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.08 0 0 0 0 0.74 0 0 0 0 0.86 0 0 0 0.55 0"/>
+      <feBlend in="SourceGraphic" mode="screen"/>
+    </filter>
+    <pattern id="grid" width="42" height="42" patternUnits="userSpaceOnUse">
+      <path d="M 42 0 L 0 0 0 42" stroke="#2dd4bf" stroke-opacity="0.08" stroke-width="1"/>
+    </pattern>
+    <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.2" fill="#67e8f9" fill-opacity="0.15"/>
+    </pattern>
+  </defs>
+
+  <rect width="1280" height="520" rx="34" fill="url(#bg)"/>
+  <rect width="1280" height="520" rx="34" fill="url(#grid)"/>
+  <rect width="1280" height="520" rx="34" fill="url(#dots)"/>
+
+  <circle cx="1090" cy="95" r="170" fill="#0891b2" fill-opacity="0.18" filter="url(#glow)"/>
+  <circle cx="168" cy="410" r="210" fill="#2563eb" fill-opacity="0.18" filter="url(#glow)"/>
+  <path d="M0 380 C180 310 250 455 430 370 C620 280 690 140 860 210 C1010 270 1110 205 1280 120 V520 H0 V380Z" fill="#0ea5e9" fill-opacity="0.08"/>
+
+  <g opacity="0.62">
+    <path d="M902 92 L966 56 L1030 92 V165 L966 202 L902 165 V92Z" stroke="#38bdf8" stroke-opacity="0.36" stroke-width="2"/>
+    <path d="M1028 182 L1092 146 L1156 182 V255 L1092 292 L1028 255 V182Z" stroke="#2dd4bf" stroke-opacity="0.28" stroke-width="2"/>
+    <path d="M820 230 L884 194 L948 230 V303 L884 340 L820 303 V230Z" stroke="#38bdf8" stroke-opacity="0.26" stroke-width="2"/>
+  </g>
+
+  <g transform="translate(76 74)">
+    <rect x="0" y="0" width="640" height="372" rx="30" fill="url(#card)" stroke="#2dd4bf" stroke-opacity="0.22"/>
+    <rect x="28" y="28" width="156" height="38" rx="19" fill="#082f49" stroke="#38bdf8" stroke-opacity="0.35"/>
+    <text x="46" y="53" fill="#7dd3fc" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="2.4">LEGACY SAFE</text>
+
+    <text x="28" y="126" fill="#f8fafc" font-family="Segoe UI, Arial, sans-serif" font-size="58" font-weight="800" letter-spacing="-1.6">CoolImport PCP</text>
+    <text x="30" y="169" fill="#a5f3fc" font-family="Segoe UI, Arial, sans-serif" font-size="25" font-weight="650">MIT App Inventor a Flutter Android</text>
+    <text x="30" y="211" fill="#cbd5e1" font-family="Segoe UI, Arial, sans-serif" font-size="20">Inventario textil, produccion, QR, despacho, stock e impresion</text>
+
+    <g transform="translate(30 252)">
+      <rect x="0" y="0" width="168" height="62" rx="18" fill="#0f172a" stroke="#38bdf8" stroke-opacity="0.26"/>
+      <text x="18" y="25" fill="#67e8f9" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">QR legacy</text>
+      <text x="18" y="47" fill="#f8fafc" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="800">6/8/14/16/19</text>
+
+      <rect x="188" y="0" width="168" height="62" rx="18" fill="#0f172a" stroke="#38bdf8" stroke-opacity="0.26"/>
+      <text x="206" y="25" fill="#67e8f9" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">Resiliencia</text>
+      <text x="206" y="47" fill="#f8fafc" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="800">Offline queues</text>
+
+      <rect x="376" y="0" width="190" height="62" rx="18" fill="#0f172a" stroke="#38bdf8" stroke-opacity="0.26"/>
+      <text x="394" y="25" fill="#67e8f9" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">Hardware</text>
+      <text x="394" y="47" fill="#f8fafc" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="800">Zebra / Epson</text>
+    </g>
+  </g>
+
+  <g transform="translate(780 110)">
+    <rect x="0" y="0" width="398" height="286" rx="30" fill="#061827" fill-opacity="0.88" stroke="#38bdf8" stroke-opacity="0.25"/>
+    <rect x="28" y="28" width="342" height="230" rx="22" fill="#0b2239" stroke="#1e3a5f"/>
+
+    <g transform="translate(52 54)">
+      <rect x="0" y="0" width="294" height="34" rx="12" fill="#0f2f4f"/>
+      <circle cx="20" cy="17" r="6" fill="#22c55e"/>
+      <text x="40" y="22" fill="#e0f2fe" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700">Flutter tablet client</text>
+
+      <path d="M34 58 H260" stroke="url(#cyan)" stroke-width="4" stroke-linecap="round"/>
+      <path d="M34 94 H210" stroke="#38bdf8" stroke-opacity="0.52" stroke-width="4" stroke-linecap="round"/>
+      <path d="M34 130 H240" stroke="#2dd4bf" stroke-opacity="0.5" stroke-width="4" stroke-linecap="round"/>
+
+      <g transform="translate(0 166)">
+        <rect x="0" y="0" width="84" height="44" rx="12" fill="#082f49" stroke="#38bdf8" stroke-opacity="0.3"/>
+        <text x="18" y="28" fill="#bae6fd" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">Flask</text>
+        <rect x="104" y="0" width="84" height="44" rx="12" fill="#082f49" stroke="#38bdf8" stroke-opacity="0.3"/>
+        <text x="120" y="28" fill="#bae6fd" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">Sheets</text>
+        <rect x="208" y="0" width="86" height="44" rx="12" fill="#082f49" stroke="#38bdf8" stroke-opacity="0.3"/>
+        <text x="222" y="28" fill="#bae6fd" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">Local API</text>
+      </g>
+    </g>
+  </g>
+
+  <text x="76" y="488" fill="#7dd3fc" fill-opacity="0.88" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">Production-minded migration case study</text>
+  <text x="1030" y="488" fill="#cbd5e1" fill-opacity="0.72" font-family="Segoe UI, Arial, sans-serif" font-size="15">Flutter · Python · Flask · Google Sheets · Supabase · QR</text>
+</svg>

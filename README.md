@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/images/hero_login.png" alt="CoolImport PCP - Sistema industrial Flutter" width="820">
+  <img src="assets/readme/hero.svg" alt="CoolImport PCP - Sistema industrial Flutter" width="820">
 </p>
 
 <h1 align="center">CoolImport PCP</h1>
