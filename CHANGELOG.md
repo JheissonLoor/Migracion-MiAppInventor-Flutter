@@ -17,6 +17,9 @@ El formato sigue una variante simple de Keep a Changelog y los commits usan mens
 
 ### Corregido
 
+- Fondo operativo optimizado sin repintado continuo para reducir lag en tablets y celulares.
+- Login claro moderno con tarjeta blanca, clave PCP visible y menor carga grafica.
+- Salida de Almacen reordenada con estructura familiar MIT: codigo/kardex, bloque de datos, ubicacion y fecha/hora/servicio.
 - Gestion Stock Telas normaliza codigos QR nuevos incompletos (`T20F040626-1-`) cuando existe correlativo.
 - API local de impresion actualizada a la IP productiva reciente con fallback legado.
 

@@ -6,119 +6,92 @@ import '../../core/theme/app_theme.dart';
 
 /// Fondo reutilizable para pantallas internas.
 ///
-/// Replica el lenguaje familiar del sistema MIT App Inventor (cyan + PCP),
-/// pero con una lectura mas limpia para tablets industriales.
-class EnterpriseBackdrop extends StatefulWidget {
+/// Mantiene el lenguaje visual familiar del MIT App Inventor (cyan + PCP),
+/// pero sin animacion continua para evitar lag en tablets industriales.
+class EnterpriseBackdrop extends StatelessWidget {
   final double overlayOpacity;
 
   const EnterpriseBackdrop({super.key, this.overlayOpacity = 0.0});
 
   @override
-  State<EnterpriseBackdrop> createState() => _EnterpriseBackdropState();
-}
-
-class _EnterpriseBackdropState extends State<EnterpriseBackdrop>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 24),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final t = _controller.value;
-        return Stack(
-          children: [
-            const Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFFE9FEFF),
-                      Color(0xFFC8F6F8),
-                      Color(0xFFEFF6FF),
-                    ],
-                    stops: [0.0, 0.48, 1.0],
-                  ),
+    return Stack(
+      children: [
+        const Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFE9FEFF),
+                  Color(0xFFC8F6F8),
+                  Color(0xFFEFF6FF),
+                ],
+                stops: [0.0, 0.48, 1.0],
+              ),
+            ),
+          ),
+        ),
+        const Positioned.fill(
+          child: RepaintBoundary(
+            child: CustomPaint(painter: _LegacyPatternPainter()),
+          ),
+        ),
+        const Positioned.fill(
+          child: IgnorePointer(
+            child: RepaintBoundary(
+              child: CustomPaint(painter: _OperationalGlowPainter()),
+            ),
+          ),
+        ),
+        if (overlayOpacity > 0)
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(
+                  alpha: overlayOpacity.clamp(0.0, 1.0),
                 ),
               ),
             ),
-            Positioned.fill(
-              child: CustomPaint(painter: _LegacyPatternPainter(time: t)),
-            ),
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(painter: _OperationalGlowPainter(time: t)),
+          ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            height: 5,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  CorporateTokens.mitCyanDeep,
+                  CorporateTokens.mitCyan,
+                  CorporateTokens.mitAmber,
+                ],
               ),
             ),
-            if (widget.overlayOpacity > 0)
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(
-                      alpha: widget.overlayOpacity.clamp(0.0, 1.0),
-                    ),
-                  ),
-                ),
-              ),
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                height: 5,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      CorporateTokens.mitCyanDeep,
-                      CorporateTokens.mitCyan,
-                      CorporateTokens.mitAmber,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+          ),
+        ),
+      ],
     );
   }
 }
 
 class _LegacyPatternPainter extends CustomPainter {
-  final double time;
-
-  _LegacyPatternPainter({required this.time});
+  const _LegacyPatternPainter();
 
   @override
   void paint(Canvas canvas, Size size) {
     final textStyle = TextStyle(
-      color: CorporateTokens.mitCyanDeep.withValues(alpha: 0.055),
+      color: CorporateTokens.mitCyanDeep.withValues(alpha: 0.052),
       fontSize: 30,
       fontWeight: FontWeight.w900,
       letterSpacing: 1.4,
     );
 
-    for (double y = -40; y < size.height + 80; y += 92) {
-      for (double x = -50; x < size.width + 140; x += 138) {
-        final offset = math.sin((time * math.pi * 2) + (y / 180)) * 4;
+    for (double y = -40; y < size.height + 80; y += 96) {
+      for (double x = -50; x < size.width + 140; x += 142) {
+        final offset = math.sin(y / 180) * 3;
         final painter = TextPainter(
           text: TextSpan(text: 'PCP', style: textStyle),
           textDirection: TextDirection.ltr,
@@ -131,7 +104,7 @@ class _LegacyPatternPainter extends CustomPainter {
 
         final gearPaint =
             Paint()
-              ..color = CorporateTokens.mitCyanDeep.withValues(alpha: 0.035)
+              ..color = CorporateTokens.mitCyanDeep.withValues(alpha: 0.032)
               ..style = PaintingStyle.stroke
               ..strokeWidth = 1.4;
         final center = Offset(x + 88 + offset, y + 15);
@@ -156,7 +129,7 @@ class _LegacyPatternPainter extends CustomPainter {
           ..moveTo(0, size.height * 0.78)
           ..quadraticBezierTo(
             size.width * 0.28,
-            size.height * 0.70 + math.sin(time * math.pi * 2) * 10,
+            size.height * 0.70,
             size.width * 0.62,
             size.height * 0.82,
           )
@@ -173,13 +146,11 @@ class _LegacyPatternPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _LegacyPatternPainter old) => old.time != time;
+  bool shouldRepaint(covariant _LegacyPatternPainter oldDelegate) => false;
 }
 
 class _OperationalGlowPainter extends CustomPainter {
-  final double time;
-
-  _OperationalGlowPainter({required this.time});
+  const _OperationalGlowPainter();
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -187,23 +158,17 @@ class _OperationalGlowPainter extends CustomPainter {
         Paint()
           ..shader = RadialGradient(
             colors: [
-              CorporateTokens.mitCyan.withValues(alpha: 0.18),
+              CorporateTokens.mitCyan.withValues(alpha: 0.16),
               CorporateTokens.mitCyan.withValues(alpha: 0.0),
             ],
           ).createShader(
             Rect.fromCircle(
-              center: Offset(
-                size.width * 0.16 + math.sin(time * math.pi * 2) * 18,
-                size.height * 0.22,
-              ),
+              center: Offset(size.width * 0.16, size.height * 0.22),
               radius: 240,
             ),
           );
     canvas.drawCircle(
-      Offset(
-        size.width * 0.16 + math.sin(time * math.pi * 2) * 18,
-        size.height * 0.22,
-      ),
+      Offset(size.width * 0.16, size.height * 0.22),
       240,
       cyanGlow,
     );
@@ -212,7 +177,7 @@ class _OperationalGlowPainter extends CustomPainter {
         Paint()
           ..shader = RadialGradient(
             colors: [
-              CorporateTokens.cobalt600.withValues(alpha: 0.10),
+              CorporateTokens.cobalt600.withValues(alpha: 0.08),
               CorporateTokens.cobalt600.withValues(alpha: 0.0),
             ],
           ).createShader(
@@ -229,5 +194,5 @@ class _OperationalGlowPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _OperationalGlowPainter old) => old.time != time;
+  bool shouldRepaint(covariant _OperationalGlowPainter oldDelegate) => false;
 }

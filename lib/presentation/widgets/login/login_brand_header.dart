@@ -12,9 +12,7 @@ class LoginBrandHeader extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallMobile = screenWidth < 380;
 
-    final companySize = compact
-        ? (isSmallMobile ? 22.0 : 24.0)
-        : 28.0;
+    final companySize = compact ? (isSmallMobile ? 22.0 : 24.0) : 28.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,7 +48,7 @@ class LoginBrandHeader extends StatelessWidget {
 
         // Instrucción
         Text(
-          'Ingrese su credencial para acceder al sistema.',
+          'Ingrese su credencial para acceder al sistema PCP.',
           style: TextStyle(
             fontSize: compact ? 12.5 : 13.5,
             color: CorporateTokens.loginTextSecondary,

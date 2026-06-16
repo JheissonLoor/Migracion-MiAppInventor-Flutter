@@ -1,9 +1,8 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 
-/// Contenedor principal del login con fondo enterprise oscuro y animado.
-/// Breakpoints optimizados: mobile < 600, tablet 600-1024, desktop > 1024.
+/// Contenedor principal del login con fondo claro, corporativo y liviano.
+/// Evita animaciones de pantalla completa para mantener fluidez en celulares.
 class LoginCorporateShell extends StatelessWidget {
   final Widget child;
 
@@ -17,23 +16,25 @@ class LoginCorporateShell extends StatelessWidget {
         final isTablet = width >= 600;
         final isDesktop = width >= 1024;
 
-        final maxContentWidth = isDesktop
-            ? 1120.0
-            : isTablet
-              ? 900.0
-              : 450.0;
+        final maxContentWidth =
+            isDesktop
+                ? 1120.0
+                : isTablet
+                ? 900.0
+                : 450.0;
 
-        final horizontalPadding = isDesktop
-            ? 42.0
-            : isTablet
-              ? 32.0
-              : 16.0;
+        final horizontalPadding =
+            isDesktop
+                ? 42.0
+                : isTablet
+                ? 32.0
+                : 16.0;
 
         final verticalPadding = isTablet ? 22.0 : 16.0;
 
         return Stack(
           children: [
-            const Positioned.fill(child: _AnimatedBackdrop()),
+            const Positioned.fill(child: _LightLoginBackdrop()),
             SafeArea(
               child: Center(
                 child: SingleChildScrollView(
@@ -55,224 +56,117 @@ class LoginCorporateShell extends StatelessWidget {
   }
 }
 
-class _AnimatedBackdrop extends StatefulWidget {
-  const _AnimatedBackdrop();
-
-  @override
-  State<_AnimatedBackdrop> createState() => _AnimatedBackdropState();
-}
-
-class _AnimatedBackdropState extends State<_AnimatedBackdrop>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 18),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+class _LightLoginBackdrop extends StatelessWidget {
+  const _LightLoginBackdrop();
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final t = _controller.value;
-        return Stack(
-          children: [
-            const Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: CorporateTokens.loginBackgroundGradient,
-                  ),
-                ),
+    return Stack(
+      children: [
+        const Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: CorporateTokens.loginBackgroundGradient,
               ),
             ),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(0.04, -0.95),
-                    radius: 1.15,
-                    colors: [
-                      Colors.white.withValues(alpha: 0.14),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
+          ),
+        ),
+        Positioned(
+          top: -120,
+          right: -90,
+          child: _softCircle(300, const Color(0xFFBFEFFF), 0.46),
+        ),
+        Positioned(
+          left: -130,
+          bottom: -120,
+          child: _softCircle(330, const Color(0xFFDDFBFF), 0.64),
+        ),
+        Positioned(
+          right: 24,
+          bottom: 70,
+          child: _softCircle(120, const Color(0xFFFFF2B8), 0.28),
+        ),
+        const Positioned.fill(
+          child: IgnorePointer(
+            child: RepaintBoundary(
+              child: CustomPaint(painter: _LoginGridPainter()),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            height: 4,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  CorporateTokens.mitCyanDeep,
+                  CorporateTokens.mitCyan,
+                  CorporateTokens.mitAmber,
+                ],
               ),
             ),
-            Positioned.fill(
-              child: CustomPaint(painter: _LoginWavePainter(time: t)),
-            ),
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(painter: _LoginDotsPainter(time: t)),
-              ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              top: 172,
-              child: Opacity(
-                opacity: 0.22 + (math.sin(t * math.pi * 2) * 0.08),
-                child: Container(
-                  height: 1.5,
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: CorporateTokens.loginDividerGlowGradient,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                height: 3,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Color(0xFF175B9A),
-                      Color(0xFF2A82C3),
-                      Color(0xFF43C3F5),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+          ),
+        ),
+      ],
+    );
+  }
+
+  static Widget _softCircle(double size, Color color, double opacity) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color.withValues(alpha: opacity),
+      ),
     );
   }
 }
 
-class _LoginWavePainter extends CustomPainter {
-  final double time;
-
-  _LoginWavePainter({required this.time});
+class _LoginGridPainter extends CustomPainter {
+  const _LoginGridPainter();
 
   @override
   void paint(Canvas canvas, Size size) {
-    final glow1 =
+    final linePaint =
         Paint()
-          ..shader = RadialGradient(
-            center: Alignment.center,
-            radius: 1.0,
-            colors: [
-              const Color(0xFF2A89D6).withValues(alpha: 0.22),
-              const Color(0xFF2A89D6).withValues(alpha: 0.0),
-            ],
-          ).createShader(
-            Rect.fromCircle(
-              center: Offset(
-                size.width * 0.15 + math.sin(time * math.pi * 2) * 30,
-                size.height * 0.2 + math.cos(time * math.pi * 2) * 20,
-              ),
-              radius: 280,
-            ),
-          );
-    canvas.drawCircle(
-      Offset(
-        size.width * 0.15 + math.sin(time * math.pi * 2) * 30,
-        size.height * 0.2 + math.cos(time * math.pi * 2) * 20,
-      ),
-      280,
-      glow1,
-    );
+          ..color = CorporateTokens.cobalt600.withValues(alpha: 0.035)
+          ..strokeWidth = 1;
 
-    final glow2 =
-        Paint()
-          ..shader = RadialGradient(
-            center: Alignment.center,
-            radius: 1.0,
-            colors: [
-              const Color(0xFF45C7F9).withValues(alpha: 0.16),
-              const Color(0xFF45C7F9).withValues(alpha: 0.0),
-            ],
-          ).createShader(
-            Rect.fromCircle(
-              center: Offset(
-                size.width * 0.80 + math.cos((time + 0.3) * math.pi * 2) * 25,
-                size.height * 0.75 + math.sin((time + 0.3) * math.pi * 2) * 18,
-              ),
-              radius: 220,
-            ),
-          );
-    canvas.drawCircle(
-      Offset(
-        size.width * 0.80 + math.cos((time + 0.3) * math.pi * 2) * 25,
-        size.height * 0.75 + math.sin((time + 0.3) * math.pi * 2) * 18,
-      ),
-      220,
-      glow2,
-    );
-
-    final wavePaint =
-        Paint()
-          ..color = CorporateTokens.loginAccent.withValues(alpha: 0.09)
-          ..style = PaintingStyle.fill;
-
-    final wave = Path();
-    wave.moveTo(0, size.height);
-    for (double x = 0; x <= size.width; x += 4) {
-      final y =
-          size.height * 0.78 +
-          math.sin((x / size.width * 2 * math.pi) + (time * math.pi * 2)) * 20 +
-          math.cos((x / size.width * 3 * math.pi) + (time * math.pi * 3)) * 8;
-      wave.lineTo(x, y);
+    for (double x = 0; x < size.width; x += 44) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), linePaint);
     }
-    wave.lineTo(size.width, size.height);
-    wave.close();
-    canvas.drawPath(wave, wavePaint);
+    for (double y = 0; y < size.height; y += 44) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), linePaint);
+    }
+
+    final accentPaint =
+        Paint()
+          ..color = CorporateTokens.mitCyanDeep.withValues(alpha: 0.045)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(size.width * 0.08, size.height * 0.10, 180, 180),
+        const Radius.circular(44),
+      ),
+      accentPaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(size.width * 0.58, size.height * 0.70, 220, 140),
+        const Radius.circular(36),
+      ),
+      accentPaint,
+    );
   }
 
   @override
-  bool shouldRepaint(covariant _LoginWavePainter old) => old.time != time;
-}
-
-class _LoginDotsPainter extends CustomPainter {
-  final double time;
-
-  _LoginDotsPainter({required this.time});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final dotPaint =
-        Paint()
-          ..color = CorporateTokens.loginAccent.withValues(alpha: 0.25)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-
-    for (int i = 0; i < 16; i++) {
-      final n = i / 16.0;
-      final px =
-          (n * size.width * 1.3) -
-          (size.width * 0.15) +
-          math.sin((time + n * 2.8) * math.pi * 2) * 22;
-      final py =
-          size.height * (0.12 + n * 0.68) +
-          math.cos((time + n * 2.2) * math.pi * 2) * 16;
-      final r = 2.0 + math.sin((time + n) * math.pi * 2) * 0.9;
-
-      canvas.drawCircle(Offset(px, py), r, dotPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _LoginDotsPainter old) => old.time != time;
+  bool shouldRepaint(covariant _LoginGridPainter oldDelegate) => false;
 }

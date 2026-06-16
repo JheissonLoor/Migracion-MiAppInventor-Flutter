@@ -1,9 +1,8 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 
-/// Tarjeta principal del login con acabado glass oscuro corporativo.
-/// Padding responsive para mobile y tablet.
+/// Tarjeta principal del login con superficie clara y lectura inmediata.
+/// Mantiene elevacion suave y borde corporativo para celular y tablet.
 class LoginFormCard extends StatelessWidget {
   final Widget child;
 
@@ -18,71 +17,59 @@ class LoginFormCard extends StatelessWidget {
     final verticalPadTop = isCompact ? 20.0 : 28.0;
     final verticalPadBottom = isCompact ? 18.0 : 24.0;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(CorporateTokens.radiusLg + 2),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          padding: EdgeInsets.fromLTRB(
-            horizontalPad,
-            verticalPadTop,
-            horizontalPad,
-            verticalPadBottom,
-          ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(CorporateTokens.radiusLg + 2),
-            gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: CorporateTokens.loginGlassCardGradient,
-            ),
-            border: Border.all(
-              color: CorporateTokens.loginSurfaceBorder.withValues(alpha: 0.86),
-            ),
-            boxShadow: CorporateTokens.loginGlassCardShadow,
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                left: 0,
-                right: 0,
-                top: 0,
-                child: Container(
-                  height: 1,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.transparent,
-                        CorporateTokens.loginAccent.withValues(alpha: 0.45),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                right: -36,
-                top: -36,
-                child: IgnorePointer(
-                  child: Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          CorporateTokens.loginAccent.withValues(alpha: 0.20),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              child,
-            ],
-          ),
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        horizontalPad,
+        verticalPadTop,
+        horizontalPad,
+        verticalPadBottom,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(CorporateTokens.radiusLg + 2),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: CorporateTokens.loginGlassCardGradient,
         ),
+        border: Border.all(color: CorporateTokens.loginSurfaceBorder),
+        boxShadow: CorporateTokens.loginGlassCardShadow,
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            child: Container(
+              height: 3,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(99),
+                gradient: const LinearGradient(
+                  colors: [
+                    CorporateTokens.mitCyanDeep,
+                    CorporateTokens.mitCyan,
+                    CorporateTokens.mitAmber,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: -38,
+            top: -38,
+            child: IgnorePointer(
+              child: Container(
+                width: 118,
+                height: 118,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: CorporateTokens.mitCyan.withValues(alpha: 0.10),
+                ),
+              ),
+            ),
+          ),
+          Padding(padding: const EdgeInsets.only(top: 6), child: child),
+        ],
       ),
     );
   }

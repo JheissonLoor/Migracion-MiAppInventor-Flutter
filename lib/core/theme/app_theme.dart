@@ -88,46 +88,46 @@ class CorporateTokens {
   ];
 
   static const List<Color> loginBackgroundGradient = [
-    Color(0xFF040B1A),
-    Color(0xFF0A1730),
-    Color(0xFF0F2C53),
+    Color(0xFFFFFFFF),
+    Color(0xFFF4FBFF),
+    Color(0xFFE8F4FF),
   ];
 
   static const List<Color> loginHeroGradient = [
-    Color(0xFF15335A),
-    Color(0xFF1E5087),
-    Color(0xFF2A77BA),
+    Color(0xFFE9FEFF),
+    Color(0xFFDBF4FF),
+    Color(0xFFDDEBFF),
   ];
 
   static const List<Color> loginPrimaryButtonGradient = [
-    Color(0xFF2E6ED0),
-    Color(0xFF1A91DE),
+    Color(0xFF174C9A),
+    Color(0xFF1687C7),
   ];
 
   static const List<Color> loginGlassCardGradient = [
-    Color(0xEE16263E),
-    Color(0xEB13233A),
-    Color(0xE6142135),
+    Color(0xFFFFFFFF),
+    Color(0xFFF8FBFF),
+    Color(0xFFF2F8FF),
   ];
 
   static const List<BoxShadow> loginGlassCardShadow = [
-    BoxShadow(color: Color(0x45000000), blurRadius: 36, offset: Offset(0, 18)),
-    BoxShadow(color: Color(0x26020510), blurRadius: 12, offset: Offset(0, 6)),
+    BoxShadow(color: Color(0x1F1E3F7A), blurRadius: 34, offset: Offset(0, 16)),
+    BoxShadow(color: Color(0x0F000000), blurRadius: 10, offset: Offset(0, 4)),
   ];
 
   static const List<Color> loginDividerGlowGradient = [
     Color(0x00000000),
-    Color(0x4445C7F9),
+    Color(0x662196F3),
     Color(0x00000000),
   ];
 
-  static const Color loginSurface = Color(0xFF17273F);
-  static const Color loginSurfaceStrong = Color(0xFF111E34);
-  static const Color loginSurfaceBorder = Color(0xFF2B4668);
-  static const Color loginTextPrimary = Color(0xFFF3F8FF);
-  static const Color loginTextSecondary = Color(0xFFA8BEDD);
-  static const Color loginTextMuted = Color(0xFF7E97B7);
-  static const Color loginAccent = Color(0xFF45C7F9);
+  static const Color loginSurface = Color(0xFFF8FBFF);
+  static const Color loginSurfaceStrong = Color(0xFFFFFFFF);
+  static const Color loginSurfaceBorder = Color(0xFFD7E5F5);
+  static const Color loginTextPrimary = Color(0xFF0B1B33);
+  static const Color loginTextSecondary = Color(0xFF42526B);
+  static const Color loginTextMuted = Color(0xFF697891);
+  static const Color loginAccent = Color(0xFF1687C7);
 }
 
 class AppTheme {

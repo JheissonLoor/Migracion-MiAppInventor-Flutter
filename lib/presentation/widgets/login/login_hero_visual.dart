@@ -159,11 +159,7 @@ class _LoginHeroVisualState extends State<LoginHeroVisual>
               ),
 
               // Solo un badge pequeño "PCP" abajo a la izquierda
-              Positioned(
-                left: 14,
-                bottom: 12,
-                child: _buildPcpBadge(),
-              ),
+              Positioned(left: 14, bottom: 12, child: _buildPcpBadge()),
             ],
           ),
         ),
@@ -205,9 +201,7 @@ class _LoginHeroVisualState extends State<LoginHeroVisual>
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.15),
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
       ),
       child: const Text(
         'Plataforma PCP',

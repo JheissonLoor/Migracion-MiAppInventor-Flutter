@@ -121,37 +121,7 @@ class _SalidaAlmacenScreenState extends ConsumerState<SalidaAlmacenScreen>
                                         _buildStartHint(),
                                         const SizedBox(height: 10),
                                       ] else ...[
-                                        _buildKardexPanel(state),
-                                        const SizedBox(height: 10),
-                                        _buildDataCard(
-                                          title: 'Datos del codigo escaneado',
-                                          children: [
-                                            _buildReadOnlyNotice(),
-                                            const SizedBox(height: 10),
-                                            _buildFieldGrid(state),
-                                            const SizedBox(height: 10),
-                                            Row(
-                                              children: [
-                                                Expanded(
-                                                  child: _readonlyField(
-                                                    'Fecha salida',
-                                                    state.form.fechaSalida,
-                                                    icon: Icons.today_rounded,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 10),
-                                                Expanded(
-                                                  child: _readonlyField(
-                                                    'Hora salida',
-                                                    state.form.horaSalida,
-                                                    icon:
-                                                        Icons.schedule_rounded,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
+                                        _buildSalidaLegacyDataPanel(state),
                                         const SizedBox(height: 10),
                                         _buildDataCard(
                                           title: 'Ubicacion operativa',
@@ -312,6 +282,8 @@ class _SalidaAlmacenScreenState extends ConsumerState<SalidaAlmacenScreen>
                                               ),
                                               const SizedBox(height: 10),
                                             ],
+                                            _buildSalidaMetaBlock(state),
+                                            const SizedBox(height: 10),
                                             Container(
                                               width: double.infinity,
                                               padding: const EdgeInsets.all(10),
@@ -776,37 +748,75 @@ class _SalidaAlmacenScreenState extends ConsumerState<SalidaAlmacenScreen>
     );
   }
 
-  Widget _buildKardexPanel(SalidaAlmacenState state) {
-    if (!state.muestraKardex) {
-      return const SizedBox.shrink();
-    }
+  Widget _buildSalidaLegacyDataPanel(SalidaAlmacenState state) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: CorporateTokens.borderSoft),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: CorporateTokens.mitCyan.withValues(alpha: 0.25),
+        ),
+        boxShadow: CorporateTokens.cardShadow,
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.confirmation_number_rounded, size: 18),
-          const SizedBox(width: 8),
-          const Text(
-            'Codigo Kardex:',
-            style: TextStyle(
-              color: CorporateTokens.navy900,
-              fontWeight: FontWeight.w700,
+          Container(
+            height: 5,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  CorporateTokens.mitCyanDeep,
+                  CorporateTokens.mitCyan,
+                  CorporateTokens.mitAmber,
+                ],
+              ),
             ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              _safe(state.form.codigoKardex),
-              style: const TextStyle(
-                color: CorporateTokens.navy900,
-                fontWeight: FontWeight.w600,
-              ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildReadOnlyNotice(),
+                const SizedBox(height: 10),
+                _legacySalidaSingleBlock(
+                  label: 'CODIGO KARDEX',
+                  value: _safe(state.form.codigoKardex),
+                  backgroundColor: const Color(0xFFE5E7EB),
+                  borderColor: const Color(0xFFD1D5DB),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: CorporateTokens.mitAmber.withValues(alpha: 0.24),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: CorporateTokens.mitAmber.withValues(alpha: 0.45),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _legacySalidaField('CODIGO PCP', state.form.codigoPcp),
+                      _legacySalidaField('MATERIAL', state.form.material),
+                      _legacySalidaField('TITULO', state.form.titulo),
+                      _legacySalidaField('COLOR', state.form.color),
+                      _legacySalidaField('LOTE', state.form.lote),
+                      _legacySalidaField('NUM CAJA', state.form.numCaja),
+                      _legacySalidaField(
+                        'PESO NETO',
+                        state.form.pesoNetoTotal,
+                        withBottomDivider: false,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -814,66 +824,100 @@ class _SalidaAlmacenScreenState extends ConsumerState<SalidaAlmacenScreen>
     );
   }
 
-  Widget _buildFieldGrid(SalidaAlmacenState state) {
-    final items = <MapEntry<String, String>>[
-      MapEntry('Codigo PCP', state.form.codigoPcp),
-      MapEntry('Material', state.form.material),
-      MapEntry('Titulo', state.form.titulo),
-      MapEntry('Color', state.form.color),
-      MapEntry('Lote', state.form.lote),
-      MapEntry('Num caja', state.form.numCaja),
-      MapEntry('Servicio', state.form.servicio),
-    ];
-
-    return Wrap(
-      runSpacing: 10,
-      spacing: 10,
-      children:
-          items.map((entry) {
-            return SizedBox(
-              width: 320,
-              child: _readonlyField(entry.key, entry.value),
-            );
-          }).toList(),
+  Widget _buildSalidaMetaBlock(SalidaAlmacenState state) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: CorporateTokens.mitAmber.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: CorporateTokens.mitAmber.withValues(alpha: 0.42),
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _legacySalidaField(
+                  'FECHA DE SALIDA',
+                  state.form.fechaSalida,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _legacySalidaField(
+                  'HORA DE SALIDA',
+                  state.form.horaSalida,
+                ),
+              ),
+            ],
+          ),
+          _legacySalidaField(
+            'SERVICIO',
+            state.form.servicio,
+            withBottomDivider: false,
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _readonlyField(String label, String value, {IconData? icon}) {
+  Widget _legacySalidaSingleBlock({
+    required String label,
+    required String value,
+    required Color backgroundColor,
+    required Color borderColor,
+  }) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: CorporateTokens.surfaceTop,
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: CorporateTokens.borderSoft),
+        border: Border.all(color: borderColor),
       ),
-      child: Row(
+      child: _legacySalidaField(label, value, withBottomDivider: false),
+    );
+  }
+
+  Widget _legacySalidaField(
+    String label,
+    String value, {
+    bool withBottomDivider = true,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (icon != null) ...[
-            Icon(icon, size: 16, color: CorporateTokens.slate500),
-            const SizedBox(width: 8),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: CorporateTokens.slate500,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _safe(value),
-                  style: const TextStyle(
-                    color: CorporateTokens.navy900,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
+          Text(
+            '$label:',
+            style: const TextStyle(
+              color: CorporateTokens.navy900,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.only(top: 2, bottom: 4),
+            decoration:
+                withBottomDivider
+                    ? const BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: Color(0x996B7280), width: 1),
+                      ),
+                    )
+                    : null,
+            child: Text(
+              _safe(value),
+              style: const TextStyle(
+                color: CorporateTokens.navy900,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],

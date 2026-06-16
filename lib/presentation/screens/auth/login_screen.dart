@@ -253,10 +253,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             ),
             const SizedBox(width: 6),
             Text(
-              'Conexión segura y encriptada',
+              'Acceso seguro y encriptado',
               style: TextStyle(
                 fontSize: 11,
-                color: CorporateTokens.loginTextMuted,
+                color: CorporateTokens.loginTextSecondary,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.2,
               ),
@@ -274,7 +274,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       style: TextStyle(
         fontSize: 11,
         color: CorporateTokens.loginTextMuted,
-        fontWeight: FontWeight.w400,
+        fontWeight: FontWeight.w500,
         letterSpacing: 0.3,
       ),
     );
@@ -298,8 +298,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                CorporateTokens.loginSurfaceStrong.withValues(alpha: 0.94),
-                CorporateTokens.loginSurface.withValues(alpha: 0.94),
+                CorporateTokens.cobalt800.withValues(alpha: 0.94),
+                CorporateTokens.navy900.withValues(alpha: 0.94),
               ],
             ),
           ),
@@ -403,10 +403,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     final input = value.trim();
 
     if (input.isEmpty) {
-      return forceRequiredMessage ? 'Ingrese su credencial para continuar.' : null;
+      return forceRequiredMessage ? 'Ingrese su clave para continuar.' : null;
     }
     if (input.length < 4) {
-      return 'La credencial debe tener al menos 4 caracteres.';
+      return 'La clave debe tener al menos 4 caracteres.';
     }
     return null;
   }
@@ -414,7 +414,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   String _normalizeBackendError(String? rawMessage) {
     final message = (rawMessage ?? '').replaceAll('Exception: ', '').trim();
     if (message.isEmpty) {
-      return 'No fue posible validar la credencial.';
+      return 'No fue posible validar la clave de acceso.';
     }
     return message;
   }

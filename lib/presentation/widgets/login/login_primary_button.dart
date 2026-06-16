@@ -53,18 +53,20 @@ class _LoginPrimaryButtonState extends State<LoginPrimaryButton>
       onEnter: (_) => setState(() => _isHovering = true),
       onExit: (_) => setState(() => _isHovering = false),
       child: GestureDetector(
-        onTapDown: canPress
-            ? (_) {
-                setState(() => _isPressed = true);
-                HapticFeedback.lightImpact();
-              }
-            : null,
-        onTapUp: canPress
-            ? (_) {
-                setState(() => _isPressed = false);
-                widget.onPressed();
-              }
-            : null,
+        onTapDown:
+            canPress
+                ? (_) {
+                  setState(() => _isPressed = true);
+                  HapticFeedback.lightImpact();
+                }
+                : null,
+        onTapUp:
+            canPress
+                ? (_) {
+                  setState(() => _isPressed = false);
+                  widget.onPressed();
+                }
+                : null,
         onTapCancel: () => setState(() => _isPressed = false),
         child: AnimatedScale(
           scale: pressScale,
@@ -79,14 +81,18 @@ class _LoginPrimaryButtonState extends State<LoginPrimaryButton>
               boxShadow:
                   canPress
                       ? [
-                          BoxShadow(
-                            color: const Color(0xFF117FD4).withValues(
-                              alpha: _isPressed ? 0.25 : (_isHovering ? 0.42 : 0.32),
-                            ),
-                            blurRadius: _isPressed ? 12 : (_isHovering ? 24 : 18),
-                            offset: Offset(0, _isPressed ? 6 : (_isHovering ? 12 : 10)),
+                        BoxShadow(
+                          color: const Color(0xFF117FD4).withValues(
+                            alpha:
+                                _isPressed ? 0.25 : (_isHovering ? 0.42 : 0.32),
                           ),
-                        ]
+                          blurRadius: _isPressed ? 12 : (_isHovering ? 24 : 18),
+                          offset: Offset(
+                            0,
+                            _isPressed ? 6 : (_isHovering ? 12 : 10),
+                          ),
+                        ),
+                      ]
                       : const [],
             ),
             child: SizedBox(
@@ -97,7 +103,9 @@ class _LoginPrimaryButtonState extends State<LoginPrimaryButton>
                 borderRadius: BorderRadius.circular(CorporateTokens.radiusMd),
                 child: Ink(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(CorporateTokens.radiusMd),
+                    borderRadius: BorderRadius.circular(
+                      CorporateTokens.radiusMd,
+                    ),
                     gradient:
                         canPress
                             ? LinearGradient(
@@ -105,23 +113,25 @@ class _LoginPrimaryButtonState extends State<LoginPrimaryButton>
                               end: Alignment.bottomRight,
                               colors:
                                   _isHovering
-                                      ? const [Color(0xFF2A76D6), Color(0xFF1CA6E8)]
-                                      : CorporateTokens.loginPrimaryButtonGradient,
+                                      ? const [
+                                        Color(0xFF2A76D6),
+                                        Color(0xFF1CA6E8),
+                                      ]
+                                      : CorporateTokens
+                                          .loginPrimaryButtonGradient,
                             )
                             : LinearGradient(
                               colors: [
-                                CorporateTokens.loginSurfaceStrong.withValues(
-                                  alpha: 0.82,
-                                ),
-                                CorporateTokens.loginSurfaceStrong.withValues(
-                                  alpha: 0.82,
-                                ),
+                                const Color(0xFFB8C7DA),
+                                const Color(0xFF9AABC2),
                               ],
                             ),
                     border: Border.all(
                       color:
                           canPress
-                              ? CorporateTokens.loginAccent.withValues(alpha: 0.35)
+                              ? CorporateTokens.loginAccent.withValues(
+                                alpha: 0.35,
+                              )
                               : Colors.transparent,
                     ),
                   ),
@@ -132,7 +142,8 @@ class _LoginPrimaryButtonState extends State<LoginPrimaryButton>
                           child: AnimatedBuilder(
                             animation: _shineController,
                             builder: (context, child) {
-                              final travel = (_shineController.value * 1.8) - 0.4;
+                              final travel =
+                                  (_shineController.value * 1.8) - 0.4;
                               return FractionalTranslation(
                                 translation: Offset(travel, 0),
                                 child: Transform.rotate(

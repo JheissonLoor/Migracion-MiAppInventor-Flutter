@@ -72,7 +72,7 @@ class _LoginPasswordFieldState extends State<LoginPasswordField> {
             ),
             const SizedBox(width: 6),
             Text(
-              'Credencial de acceso',
+              'Clave de acceso PCP',
               style: TextStyle(
                 fontSize: isCompact ? 12 : 13,
                 fontWeight: FontWeight.w600,
@@ -92,9 +92,10 @@ class _LoginPasswordFieldState extends State<LoginPasswordField> {
             borderRadius: BorderRadius.circular(CorporateTokens.radiusSm),
             color: const Color(0xFFF7F9FC),
             border: Border.all(
-              color: hasError
-                  ? AppColors.error.withValues(alpha: 0.85)
-                  : isFocused
+              color:
+                  hasError
+                      ? AppColors.error.withValues(alpha: 0.85)
+                      : isFocused
                       ? CorporateTokens.loginAccent
                       : const Color(0xFFD0DBEA),
               width: isFocused ? 1.8 : 1.2,
@@ -129,7 +130,7 @@ class _LoginPasswordFieldState extends State<LoginPasswordField> {
               letterSpacing: 0.3,
             ),
             decoration: InputDecoration(
-              hintText: 'Ingrese su credencial',
+              hintText: 'Ingrese su clave de acceso',
               hintStyle: TextStyle(
                 color: const Color(0xFF9CA3AF),
                 fontWeight: FontWeight.w400,
@@ -137,9 +138,10 @@ class _LoginPasswordFieldState extends State<LoginPasswordField> {
               ),
               prefixIcon: Icon(
                 Icons.lock_outline_rounded,
-                color: isFocused
-                    ? CorporateTokens.loginAccent
-                    : const Color(0xFF6B7280),
+                color:
+                    isFocused
+                        ? CorporateTokens.loginAccent
+                        : const Color(0xFF6B7280),
                 size: 20,
               ),
               suffixIcon: IconButton(
@@ -151,14 +153,14 @@ class _LoginPasswordFieldState extends State<LoginPasswordField> {
                         ? Icons.visibility_off_rounded
                         : Icons.visibility_rounded,
                     key: ValueKey(widget.obscureText),
-                    color: isFocused
-                        ? CorporateTokens.loginAccent
-                        : const Color(0xFF6B7280),
+                    color:
+                        isFocused
+                            ? CorporateTokens.loginAccent
+                            : const Color(0xFF6B7280),
                     size: 20,
                   ),
                 ),
-                tooltip:
-                    widget.obscureText ? 'Mostrar credencial' : 'Ocultar credencial',
+                tooltip: widget.obscureText ? 'Mostrar clave' : 'Ocultar clave',
               ),
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
@@ -189,27 +191,28 @@ class _LoginPasswordFieldState extends State<LoginPasswordField> {
               ),
             );
           },
-          child: hasError
-              ? Row(
-                  key: const ValueKey('error'),
-                  children: [
-                    Icon(
-                      Icons.error_outline_rounded,
-                      size: 13,
-                      color: AppColors.error.withValues(alpha: 0.90),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      widget.errorText!,
-                      style: TextStyle(
+          child:
+              hasError
+                  ? Row(
+                    key: const ValueKey('error'),
+                    children: [
+                      Icon(
+                        Icons.error_outline_rounded,
+                        size: 13,
                         color: AppColors.error.withValues(alpha: 0.90),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
                       ),
-                    ),
-                  ],
-                )
-              : const SizedBox.shrink(key: ValueKey('empty')),
+                      const SizedBox(width: 5),
+                      Text(
+                        widget.errorText!,
+                        style: TextStyle(
+                          color: AppColors.error.withValues(alpha: 0.90),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  )
+                  : const SizedBox.shrink(key: ValueKey('empty')),
         ),
       ],
     );
