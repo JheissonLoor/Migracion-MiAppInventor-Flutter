@@ -22,7 +22,7 @@
 
 ---
 
-## Resumen en 30 segundos
+## Resumen
 
 CoolImport PCP es una modernizacion en Flutter Android de un sistema legacy productivo originalmente construido en MIT App Inventor. La app esta orientada a operarios de planta textil en tablets Android, manteniendo compatibilidad con backend Flask, Google Sheets, Supabase, Apps Script y API local de impresion.
 
