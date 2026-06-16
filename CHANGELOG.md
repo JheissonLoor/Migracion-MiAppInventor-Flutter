@@ -13,6 +13,7 @@ El formato sigue una variante simple de Keep a Changelog y los commits usan mens
 - Caso de estudio para reclutadores en `docs/recruiter_case_study.md`.
 - Perfil profesional ampliado del ecosistema CoolImport en `docs/coolimport_professional_profile.md`.
 - Guia de revision tecnica actualizada para evaluadores.
+- Estilo visual MIT-moderno para pantallas operativas: fondo PCP familiar, bandas cyan/amarillo y cabeceras guiadas.
 
 ### Corregido
 

@@ -1,11 +1,13 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import '../../core/theme/app_theme.dart';
 
-/// Fondo reutilizable para pantallas internas — estilo "Clean Light Industrial".
+/// Fondo reutilizable para pantallas internas.
 ///
-/// Gradiente blanco-azul suave con ondas delicadas y particulas flotantes.
-/// Diseñado para no cansar la vista del operario en jornadas largas.
+/// Replica el lenguaje familiar del sistema MIT App Inventor (cyan + PCP),
+/// pero con una lectura mas limpia para tablets industriales.
 class EnterpriseBackdrop extends StatefulWidget {
   final double overlayOpacity;
 
@@ -24,7 +26,7 @@ class _EnterpriseBackdropState extends State<EnterpriseBackdrop>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 20),
+      duration: const Duration(seconds: 24),
     )..repeat();
   }
 
@@ -42,53 +44,52 @@ class _EnterpriseBackdropState extends State<EnterpriseBackdrop>
         final t = _controller.value;
         return Stack(
           children: [
-            // ── Base gradient: white → soft blue ──
             const Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                     colors: [
-                      CorporateTokens.surfaceTop,
-                      CorporateTokens.surfaceBottom,
-                      Color(0xFFF0F4FF),
+                      Color(0xFFE9FEFF),
+                      Color(0xFFC8F6F8),
+                      Color(0xFFEFF6FF),
                     ],
-                    stops: [0.0, 0.6, 1.0],
+                    stops: [0.0, 0.48, 1.0],
                   ),
                 ),
               ),
             ),
-
-            // ── Soft wave shapes ──
             Positioned.fill(
-              child: CustomPaint(
-                painter: _SoftWavePainter(time: t),
-              ),
+              child: CustomPaint(painter: _LegacyPatternPainter(time: t)),
             ),
-
-            // ── Floating particles ──
             Positioned.fill(
               child: IgnorePointer(
-                child: CustomPaint(
-                  painter: _FloatingDotsPainter(time: t),
-                ),
+                child: CustomPaint(painter: _OperationalGlowPainter(time: t)),
               ),
             ),
-
-            // ── Subtle top accent line ──
+            if (widget.overlayOpacity > 0)
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(
+                      alpha: widget.overlayOpacity.clamp(0.0, 1.0),
+                    ),
+                  ),
+                ),
+              ),
             Positioned(
               top: 0,
               left: 0,
               right: 0,
               child: Container(
-                height: 3,
+                height: 5,
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Color(0xFF3B82F6),
-                      Color(0xFF60A5FA),
-                      Color(0xFF93C5FD),
+                      CorporateTokens.mitCyanDeep,
+                      CorporateTokens.mitCyan,
+                      CorporateTokens.mitAmber,
                     ],
                   ),
                 ),
@@ -101,102 +102,132 @@ class _EnterpriseBackdropState extends State<EnterpriseBackdrop>
   }
 }
 
-/// Ondas suaves orgánicas en el fondo
-class _SoftWavePainter extends CustomPainter {
+class _LegacyPatternPainter extends CustomPainter {
   final double time;
 
-  _SoftWavePainter({required this.time});
+  _LegacyPatternPainter({required this.time});
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Wave 1: very subtle blue at bottom
-    final wave1Paint = Paint()
-      ..color = const Color(0xFF93C5FD).withValues(alpha: 0.08)
-      ..style = PaintingStyle.fill;
+    final textStyle = TextStyle(
+      color: CorporateTokens.mitCyanDeep.withValues(alpha: 0.055),
+      fontSize: 30,
+      fontWeight: FontWeight.w900,
+      letterSpacing: 1.4,
+    );
 
-    final wave1 = Path();
-    wave1.moveTo(0, size.height);
-    for (double x = 0; x <= size.width; x += 4) {
-      final y = size.height * 0.72 +
-          math.sin((x / size.width * 2 * math.pi) + (time * math.pi * 2)) * 24 +
-          math.sin((x / size.width * 4 * math.pi) + (time * math.pi * 4)) * 8;
-      wave1.lineTo(x, y);
+    for (double y = -40; y < size.height + 80; y += 92) {
+      for (double x = -50; x < size.width + 140; x += 138) {
+        final offset = math.sin((time * math.pi * 2) + (y / 180)) * 4;
+        final painter = TextPainter(
+          text: TextSpan(text: 'PCP', style: textStyle),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        canvas.save();
+        canvas.translate(x + offset, y);
+        canvas.rotate(-0.04);
+        painter.paint(canvas, Offset.zero);
+        canvas.restore();
+
+        final gearPaint =
+            Paint()
+              ..color = CorporateTokens.mitCyanDeep.withValues(alpha: 0.035)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 1.4;
+        final center = Offset(x + 88 + offset, y + 15);
+        canvas.drawCircle(center, 13, gearPaint);
+        for (var i = 0; i < 8; i++) {
+          final angle = i * math.pi / 4;
+          final p1 =
+              center + Offset(math.cos(angle) * 15, math.sin(angle) * 15);
+          final p2 =
+              center + Offset(math.cos(angle) * 20, math.sin(angle) * 20);
+          canvas.drawLine(p1, p2, gearPaint);
+        }
+      }
     }
-    wave1.lineTo(size.width, size.height);
-    wave1.close();
-    canvas.drawPath(wave1, wave1Paint);
 
-    // Wave 2: even more subtle
-    final wave2Paint = Paint()
-      ..color = const Color(0xFF60A5FA).withValues(alpha: 0.05)
-      ..style = PaintingStyle.fill;
+    final amberPaint =
+        Paint()
+          ..color = CorporateTokens.mitAmber.withValues(alpha: 0.09)
+          ..style = PaintingStyle.fill;
+    final amberPath =
+        Path()
+          ..moveTo(0, size.height * 0.78)
+          ..quadraticBezierTo(
+            size.width * 0.28,
+            size.height * 0.70 + math.sin(time * math.pi * 2) * 10,
+            size.width * 0.62,
+            size.height * 0.82,
+          )
+          ..quadraticBezierTo(
+            size.width * 0.84,
+            size.height * 0.91,
+            size.width,
+            size.height * 0.84,
+          )
+          ..lineTo(size.width, size.height)
+          ..lineTo(0, size.height)
+          ..close();
+    canvas.drawPath(amberPath, amberPaint);
+  }
 
-    final wave2 = Path();
-    wave2.moveTo(0, size.height);
-    for (double x = 0; x <= size.width; x += 4) {
-      final y = size.height * 0.82 +
-          math.sin((x / size.width * 3 * math.pi) + (time * math.pi * 2) + 1.5) * 18 +
-          math.cos((x / size.width * 2 * math.pi) + (time * math.pi * 3)) * 10;
-      wave2.lineTo(x, y);
-    }
-    wave2.lineTo(size.width, size.height);
-    wave2.close();
-    canvas.drawPath(wave2, wave2Paint);
+  @override
+  bool shouldRepaint(covariant _LegacyPatternPainter old) => old.time != time;
+}
 
-    // Subtle circle glow at top-right
-    final glowPaint = Paint()
-      ..shader = RadialGradient(
-        center: Alignment.center,
-        radius: 1.0,
-        colors: [
-          const Color(0xFF3B82F6).withValues(alpha: 0.06),
-          const Color(0xFF3B82F6).withValues(alpha: 0.0),
-        ],
-      ).createShader(Rect.fromCircle(
-        center: Offset(
-          size.width * 0.85 + math.sin(time * math.pi * 2) * 20,
-          size.height * 0.15 + math.cos(time * math.pi * 2) * 15,
-        ),
-        radius: 200,
-      ));
+class _OperationalGlowPainter extends CustomPainter {
+  final double time;
+
+  _OperationalGlowPainter({required this.time});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cyanGlow =
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              CorporateTokens.mitCyan.withValues(alpha: 0.18),
+              CorporateTokens.mitCyan.withValues(alpha: 0.0),
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(
+                size.width * 0.16 + math.sin(time * math.pi * 2) * 18,
+                size.height * 0.22,
+              ),
+              radius: 240,
+            ),
+          );
     canvas.drawCircle(
       Offset(
-        size.width * 0.85 + math.sin(time * math.pi * 2) * 20,
-        size.height * 0.15 + math.cos(time * math.pi * 2) * 15,
+        size.width * 0.16 + math.sin(time * math.pi * 2) * 18,
+        size.height * 0.22,
       ),
-      200,
-      glowPaint,
+      240,
+      cyanGlow,
+    );
+
+    final navyGlow =
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              CorporateTokens.cobalt600.withValues(alpha: 0.10),
+              CorporateTokens.cobalt600.withValues(alpha: 0.0),
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width * 0.86, size.height * 0.18),
+              radius: 220,
+            ),
+          );
+    canvas.drawCircle(
+      Offset(size.width * 0.86, size.height * 0.18),
+      220,
+      navyGlow,
     );
   }
 
   @override
-  bool shouldRepaint(covariant _SoftWavePainter old) => old.time != time;
-}
-
-/// Puntos flotantes decorativos muy sutiles
-class _FloatingDotsPainter extends CustomPainter {
-  final double time;
-
-  _FloatingDotsPainter({required this.time});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final dotPaint = Paint()
-      ..color = CorporateTokens.cyan500.withValues(alpha: 0.12)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-
-    for (int i = 0; i < 12; i++) {
-      final n = i / 12.0;
-      final px = (n * size.width * 1.2) - (size.width * 0.1) +
-          math.sin((time + n * 3) * math.pi * 2) * 20;
-      final py = size.height * (0.15 + n * 0.65) +
-          math.cos((time + n * 2.5) * math.pi * 2) * 15;
-      final radius = 1.8 + math.sin((time + n) * math.pi * 2) * 0.8;
-
-      canvas.drawCircle(Offset(px, py), radius, dotPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _FloatingDotsPainter old) => old.time != time;
+  bool shouldRepaint(covariant _OperationalGlowPainter old) => old.time != time;
 }

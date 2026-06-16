@@ -24,78 +24,132 @@ class ProductionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(10),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: CorporateTokens.borderSoft),
+        color: Colors.white.withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: CorporateTokens.mitCyan.withValues(alpha: 0.24),
+        ),
         boxShadow: CorporateTokens.cardShadow,
       ),
-      child: Row(
+      child: Column(
         children: [
-          IconButton(
-            onPressed: onBack,
-            style: IconButton.styleFrom(
-              backgroundColor: const Color(0xFFF8FAFC),
-              side: const BorderSide(color: CorporateTokens.borderSoft),
-            ),
-            icon: const Icon(
-              Icons.arrow_back_rounded,
-              color: CorporateTokens.navy900,
-            ),
-          ),
-          const SizedBox(width: 10),
           Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(15),
+            height: 7,
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [CorporateTokens.navy900, accentColor],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+                colors: [
+                  CorporateTokens.mitCyanDeep,
+                  CorporateTokens.mitCyan,
+                  CorporateTokens.mitAmber,
+                ],
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: accentColor.withValues(alpha: 0.24),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                ),
-              ],
             ),
-            child: Icon(icon, color: Colors.white, size: 22),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
               children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                IconButton(
+                  onPressed: onBack,
+                  style: IconButton.styleFrom(
+                    backgroundColor: CorporateTokens.mitCyanSoft,
+                    side: BorderSide(
+                      color: CorporateTokens.mitCyan.withValues(alpha: 0.38),
+                    ),
+                  ),
+                  icon: const Icon(
+                    Icons.arrow_back_rounded,
                     color: CorporateTokens.navy900,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.3,
                   ),
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: CorporateTokens.slate500,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                const SizedBox(width: 10),
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(15),
+                    gradient: LinearGradient(
+                      colors: [CorporateTokens.mitCyanDeep, accentColor],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: CorporateTokens.mitCyan.withValues(alpha: 0.28),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 5,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: CorporateTokens.navy900,
+                              fontSize: 21,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: CorporateTokens.mitAmberSoft,
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: CorporateTokens.mitAmber.withValues(
+                                  alpha: 0.42,
+                                ),
+                              ),
+                            ),
+                            child: const Text(
+                              'MODO MIT GUIADO',
+                              style: TextStyle(
+                                color: CorporateTokens.navy900,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: CorporateTokens.slate500,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                if (trailing != null) ...[const SizedBox(width: 8), trailing!],
               ],
             ),
           ),
-          if (trailing != null) ...[const SizedBox(width: 8), trailing!],
         ],
       ),
     );
@@ -190,74 +244,87 @@ class ProductionCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: CorporateTokens.borderSoft),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: CorporateTokens.mitCyan.withValues(alpha: 0.22),
+        ),
         boxShadow: CorporateTokens.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            height: 4,
-            decoration: BoxDecoration(
+            height: 5,
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  accentColor,
-                  CorporateTokens.cyan500.withValues(alpha: 0.35),
-                  Colors.transparent,
+                  CorporateTokens.mitCyanDeep,
+                  CorporateTokens.mitCyan,
+                  CorporateTokens.mitAmber,
                 ],
               ),
             ),
           ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            decoration: BoxDecoration(
+              color: CorporateTokens.mitAmberSoft.withValues(alpha: 0.78),
+              border: Border(
+                bottom: BorderSide(
+                  color: CorporateTokens.mitAmber.withValues(alpha: 0.38),
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.86),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: CorporateTokens.mitCyan.withValues(alpha: 0.28),
+                    ),
+                  ),
+                  child: Icon(icon, color: accentColor, size: 20),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: CorporateTokens.navy900,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      if (subtitle != null && subtitle!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle!,
+                          style: const TextStyle(
+                            color: CorporateTokens.slate700,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 13, 14, 14),
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: accentColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(icon, color: accentColor, size: 19),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: const TextStyle(
-                              color: CorporateTokens.navy900,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          if (subtitle != null &&
-                              subtitle!.trim().isNotEmpty) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              subtitle!,
-                              style: const TextStyle(
-                                color: CorporateTokens.slate500,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                ...children,
-              ],
+              children: children,
             ),
           ),
         ],
@@ -322,9 +389,11 @@ class OperationFlowGuide extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.96),
+        color: CorporateTokens.mitCyanSoft.withValues(alpha: 0.84),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: signalColor.withValues(alpha: 0.22)),
+        border: Border.all(
+          color: CorporateTokens.mitCyan.withValues(alpha: 0.28),
+        ),
         boxShadow: CorporateTokens.cardShadow,
       ),
       child: Column(
@@ -507,7 +576,7 @@ class _StepTile extends StatelessWidget {
       decoration: BoxDecoration(
         color:
             step.active
-                ? accentColor.withValues(alpha: 0.08)
+                ? CorporateTokens.mitAmberSoft.withValues(alpha: 0.72)
                 : CorporateTokens.surfaceTop,
         borderRadius: BorderRadius.circular(13),
         border: Border.all(

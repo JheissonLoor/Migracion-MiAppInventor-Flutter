@@ -48,6 +48,11 @@ class CorporateTokens {
   static const Color steel300 = Color(0xFFCBD5E1);
   static const Color steel200 = Color(0xFFE2E8F0);
   static const Color goldSoft = Color(0xFFF59E0B);
+  static const Color mitCyan = Color(0xFF12C8D2);
+  static const Color mitCyanSoft = Color(0xFFDDFBFF);
+  static const Color mitCyanDeep = Color(0xFF078C9A);
+  static const Color mitAmber = Color(0xFFF6C000);
+  static const Color mitAmberSoft = Color(0xFFFFF2B8);
 
   // ── Surfaces (fondo principal claro) ──
   static const Color surfaceTop = Color(0xFFF8FAFC);
